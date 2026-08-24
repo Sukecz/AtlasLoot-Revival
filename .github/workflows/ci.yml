@@ -1,0 +1,34 @@
+name: Validate addon
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install --yes lua5.1
+
+      - name: Validate public addon
+        run: |
+          set -euo pipefail
+          test -f AtlasLootRevival/AtlasLootRevival.toc
+          test ! -e AtlasLootRevival/AtlasLootRevival_TBC.toc
+          grep -qx '## Version: 0.1.0-alpha.1' AtlasLootRevival/AtlasLootRevival.toc
+          grep -qx '## X-Curse-Project-ID: 1666354' AtlasLootRevival/AtlasLootRevival.toc
+          find AtlasLootRevival -type f -name '*.lua' -print0 | xargs -0 luac5.1 -p
+          if git grep -nE 'https?://' -- AtlasLootRevival; then
+            echo 'Runtime addon contains an external link.' >&2
+            exit 1
+          fi

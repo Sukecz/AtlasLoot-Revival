@@ -1,0 +1,10 @@
+package-as: AtlasLootRevival
+manual-changelog: CHANGELOG.md
+
+move-folders:
+  AtlasLootRevival/AtlasLootRevival: AtlasLootRevival
+
+ignore:
+  - .git
+  - .github
+  - .gitignore

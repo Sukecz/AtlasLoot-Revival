@@ -1,0 +1,45 @@
+name: Package and release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Existing version tag to package and publish
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || github.event.created
+    runs-on: ubuntu-latest
+
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.release_ref || github.ref }}
+
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install --yes lua5.1
+
+      - name: Validate release input
+        run: |
+          set -euo pipefail
+          test -n "$CF_API_KEY"
+          test -f AtlasLootRevival/AtlasLootRevival.toc
+          test ! -e AtlasLootRevival/AtlasLootRevival_TBC.toc
+          find AtlasLootRevival -type f -name '*.lua' -print0 | xargs -0 luac5.1 -p
+
+      - name: Package and publish addon
+        uses: BigWigsMods/packager@v2

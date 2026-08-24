@@ -1,0 +1,8 @@
+/build/
+/dist/
+/.release/
+/release/
+*.zip
+*.log
+*.luac
+.DS_Store
