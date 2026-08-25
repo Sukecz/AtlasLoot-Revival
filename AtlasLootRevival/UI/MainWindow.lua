@@ -5,9 +5,15 @@ local MainWindow = ns:RegisterModule("MainWindow", {})
 local WINDOW_WIDTH = 940
 local WINDOW_HEIGHT = 600
 local SIDEBAR_WIDTH = 174
-local MAP_WIDTH = 456
-local MAP_HEIGHT = 342
-local TILE_SIZE = 114
+local MAP_LEFT = 198
+local MAP_WIDTH = 488
+local MAP_HEIGHT = 366
+local TILE_SIZE = 122
+local MAP_OUTER_PADDING = 8
+local MAP_LOOT_GAP = 12
+local MAP_RIGHT = MAP_LEFT + MAP_WIDTH + MAP_OUTER_PADDING
+local MAP_RIGHT_OFFSET = WINDOW_WIDTH - MAP_RIGHT
+local LOOT_PANEL_LEFT = MAP_RIGHT + MAP_LOOT_GAP
 local MIN_WINDOW_SCALE = 0.75
 local MAX_WINDOW_SCALE = 1.25
 local MAX_ENCOUNTER_BUTTONS = 16
@@ -67,6 +73,31 @@ local function JoinQuestIDs(questIDs)
         table.insert(parts, tostring(questID))
     end
     return table.concat(parts, ", ")
+end
+
+local function SetTruncatedText(fontString, text)
+    text = tostring(text or "")
+    fontString:SetText(text)
+
+    local availableWidth = fontString:GetWidth()
+    if not availableWidth or availableWidth <= 0
+        or fontString:GetStringWidth() <= availableWidth then
+        return
+    end
+
+    local suffix = "..."
+    local low = 0
+    local high = #text
+    while low < high do
+        local midpoint = math.ceil((low + high) / 2)
+        fontString:SetText(string.sub(text, 1, midpoint) .. suffix)
+        if fontString:GetStringWidth() <= availableWidth then
+            low = midpoint
+        else
+            high = midpoint - 1
+        end
+    end
+    fontString:SetText(string.sub(text, 1, low) .. suffix)
 end
 
 local function SetButtonHighlight(button, selected)
@@ -334,12 +365,12 @@ end
 
 function MainWindow:CreateMap(parent)
     self.mapHeading = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    self.mapHeading:SetPoint("TOPLEFT", 202, -62)
+    self.mapHeading:SetPoint("TOPLEFT", MAP_LEFT + 4, -62)
     self.mapHeading:SetTextColor(0.68, 0.68, 0.68)
 
     local floorButton = CreateFrame("Button", nil, parent)
     floorButton:SetSize(232, 24)
-    floorButton:SetPoint("TOPRIGHT", -278, -55)
+    floorButton:SetPoint("TOPRIGHT", -MAP_RIGHT_OFFSET, -55)
     floorButton.background = floorButton:CreateTexture(nil, "BACKGROUND")
     floorButton.background:SetAllPoints()
     floorButton.background:SetColorTexture(selectedColor[1], selectedColor[2], selectedColor[3], 0.12)
@@ -413,8 +444,8 @@ function MainWindow:CreateMap(parent)
     self.floorMenu = floorMenu
 
     local map = CreateBackdropFrame("Frame", nil, parent)
-    map:SetSize(MAP_WIDTH + 8, MAP_HEIGHT + 8)
-    map:SetPoint("TOPLEFT", 198, -80)
+    map:SetSize(MAP_WIDTH + MAP_OUTER_PADDING, MAP_HEIGHT + MAP_OUTER_PADDING)
+    map:SetPoint("TOPLEFT", MAP_LEFT, -80)
     SetBackdropColor(map, 0.015, 0.015, 0.015, 1)
     self.map = map
 
@@ -561,7 +592,7 @@ end
 
 function MainWindow:CreateLootPanel(parent)
     local panel = CreateBackdropFrame("Frame", nil, parent)
-    panel:SetPoint("TOPLEFT", 674, -55)
+    panel:SetPoint("TOPLEFT", LOOT_PANEL_LEFT, -55)
     panel:SetPoint("BOTTOMRIGHT", -12, 34)
     SetBackdropColor(panel, 0.035, 0.035, 0.035, 0.96)
     panel:EnableMouseWheel(true)
@@ -597,7 +628,7 @@ function MainWindow:CreateLootPanel(parent)
     self.dropChanceHeading:SetTextColor(0.62, 0.62, 0.62)
 
     self.lootPrevious = CreateFrame("Button", nil, panel)
-    self.lootPrevious:SetPoint("TOPLEFT", 113, -67)
+    self.lootPrevious:SetPoint("TOPLEFT", 94, -67)
     self.lootPrevious:SetSize(18, 18)
     self.lootPrevious.label = self.lootPrevious:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     self.lootPrevious.label:SetPoint("CENTER")
@@ -633,14 +664,14 @@ function MainWindow:CreateLootPanel(parent)
         row.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
         row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 6, 0)
-        row.name:SetPoint("TOPRIGHT", -64, 0)
+        row.name:SetPoint("TOPRIGHT", -50, 0)
         row.name:SetHeight(12)
         row.name:SetJustifyH("LEFT")
         row.name:SetJustifyV("TOP")
         row.name:SetWordWrap(false)
         row.meta = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         row.meta:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 6, 0)
-        row.meta:SetPoint("BOTTOMRIGHT", -64, 0)
+        row.meta:SetPoint("BOTTOMRIGHT", -50, 0)
         row.meta:SetHeight(10)
         row.meta:SetJustifyH("LEFT")
         row.meta:SetJustifyV("BOTTOM")
@@ -648,6 +679,7 @@ function MainWindow:CreateLootPanel(parent)
         row.meta:SetTextColor(0.45, 0.45, 0.45)
         row.chance = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         row.chance:SetPoint("RIGHT", -4, 0)
+        row.chance:SetWidth(42)
         row.chance:SetJustifyH("RIGHT")
         row.chance:SetTextColor(0.92, 0.72, 0.30)
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
@@ -842,31 +874,6 @@ function MainWindow:Create()
     self:CreateLootPanel(content)
     self:CreateResizeHandle(frame)
 
-    local feedbackButton = CreateBackdropFrame("Button", nil, content)
-    feedbackButton:SetSize(18, 18)
-    feedbackButton:SetPoint("BOTTOMLEFT", 14, 7)
-    SetBackdropColor(feedbackButton, 0.04, 0.16, 0.22, 0.98)
-    feedbackButton.label = feedbackButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    feedbackButton.label:SetPoint("CENTER", 0, 1)
-    feedbackButton.label:SetText("?")
-    feedbackButton.label:SetTextColor(0.20, 0.82, 1)
-    feedbackButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    feedbackButton:SetScript("OnEnter", function(entered)
-        GameTooltip:SetOwner(entered, "ANCHOR_TOPLEFT")
-        GameTooltip:AddLine(ns.L.FEEDBACK_TITLE, 1, 0.82, 0.38)
-        GameTooltip:AddLine(ns.L.FEEDBACK_BODY, 0.82, 0.82, 0.82, true)
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(ns.L.FEEDBACK_CLICK, 0.20, 0.82, 1)
-        GameTooltip:Show()
-    end)
-    feedbackButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-    feedbackButton:SetScript("OnClick", function()
-        MainWindow:ShowFeedbackDialog()
-    end)
-    self.feedbackButton = feedbackButton
-
     local feedbackDialog = CreateBackdropFrame("Frame", nil, content)
     feedbackDialog:SetSize(500, 126)
     feedbackDialog:SetPoint("CENTER", content, "CENTER", 0, 5)
@@ -909,12 +916,32 @@ function MainWindow:Create()
     feedbackDialog:Hide()
     self.feedbackDialog = feedbackDialog
 
-    local footer = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    footer:SetPoint("LEFT", feedbackButton, "RIGHT", 7, 0)
-    footer:SetPoint("RIGHT", content, "BOTTOMRIGHT", -34, 16)
-    footer:SetText(ns.L.STATUS_LIVE_QA)
-    footer:SetTextColor(0.52, 0.58, 0.60)
-    footer:SetJustifyH("LEFT")
+    local feedbackLink = CreateFrame("Button", nil, content)
+    feedbackLink:SetPoint("BOTTOMLEFT", 14, 7)
+    feedbackLink:SetPoint("BOTTOMRIGHT", -34, 7)
+    feedbackLink:SetHeight(18)
+    feedbackLink.label = feedbackLink:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    feedbackLink.label:SetAllPoints()
+    feedbackLink.label:SetText(ns.L.STATUS_LIVE_QA)
+    feedbackLink.label:SetTextColor(0.52, 0.58, 0.60)
+    feedbackLink.label:SetJustifyH("LEFT")
+    feedbackLink:SetScript("OnEnter", function(entered)
+        feedbackLink.label:SetTextColor(0.20, 0.82, 1)
+        GameTooltip:SetOwner(entered, "ANCHOR_TOPLEFT")
+        GameTooltip:AddLine(ns.L.FEEDBACK_TITLE, 1, 0.82, 0.38)
+        GameTooltip:AddLine(ns.L.FEEDBACK_BODY, 0.82, 0.82, 0.82, true)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(ns.L.FEEDBACK_CLICK, 0.20, 0.82, 1)
+        GameTooltip:Show()
+    end)
+    feedbackLink:SetScript("OnLeave", function()
+        feedbackLink.label:SetTextColor(0.52, 0.58, 0.60)
+        GameTooltip:Hide()
+    end)
+    feedbackLink:SetScript("OnClick", function()
+        MainWindow:ShowFeedbackDialog()
+    end)
+    self.feedbackLink = feedbackLink
 
     table.insert(UISpecialFrames, frame:GetName())
     local database = ns.modules.Database.data
@@ -1707,7 +1734,8 @@ function MainWindow:RefreshLoot()
             row.dropChanceStatus = entry.dropChanceStatus
             row.isTrashDrop = boss.kind == "trashDrops"
             row.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-            row.name:SetText(name or string.format(ns.L.LOADING_ITEM, itemID))
+            SetTruncatedText(row.name,
+                name or string.format(ns.L.LOADING_ITEM, itemID))
             local color = quality and ITEM_QUALITY_COLORS[quality]
             if color then
                 row.name:SetTextColor(color.r, color.g, color.b)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- Enlarged the instance map while keeping its original 4:3 proportions.
+- Compacted estimated drop values and moved the estimate label into the column heading.
+- Added ellipsis truncation for long item names while preserving full native tooltips.
+- Replaced the small feedback icon with a full-width clickable status link.
+
 ## 0.1.0
 
 First full Classic Era release.

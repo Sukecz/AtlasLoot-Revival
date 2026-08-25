@@ -35,7 +35,7 @@ jobs:
           test -n "$toc_version"
           test "$toc_version" = "$runtime_version"
           find AtlasLootRevival -type f -name '*.lua' -print0 | xargs -0 luac5.1 -p
-          allowed_url_pattern='^AtlasLootRevival/Locales/enUS\.lua:[0-9]+:    FEEDBACK_URL = "https://www\.curseforge\.com/wow/addons/atlasloot-revival/comments",$'
+          allowed_url_pattern='^AtlasLootRevival/Locales/enUS\.lua:[0-9]+:    FEEDBACK_URL = "https://www\.curseforge\.com/wow/addons/atlas-loot-revival/comments",$'
           unexpected_urls=$(git grep -nE 'https?://' -- AtlasLootRevival | grep -vE "$allowed_url_pattern" || true)
           if test -n "$unexpected_urls"; then
             printf '%s\n' "$unexpected_urls"
