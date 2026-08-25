@@ -25,10 +25,20 @@ jobs:
           set -euo pipefail
           test -f AtlasLootRevival/AtlasLootRevival.toc
           test ! -e AtlasLootRevival/AtlasLootRevival_TBC.toc
-          grep -qx '## Version: 0.1.0-alpha.1' AtlasLootRevival/AtlasLootRevival.toc
+          test -f AtlasLootRevival/Bindings.xml
+          test -f AtlasLootRevival/UI/MinimapButton.lua
+          test -f AtlasLootRevival/assets/dropdown-chevron.tga
+          test -f AtlasLootRevival/assets/minimap-icon.tga
           grep -qx '## X-Curse-Project-ID: 1666354' AtlasLootRevival/AtlasLootRevival.toc
+          toc_version=$(sed -n 's/^## Version: //p' AtlasLootRevival/AtlasLootRevival.toc)
+          runtime_version=$(sed -n 's/^[[:space:]]*VERSION = "\([^"]*\)",/\1/p' AtlasLootRevival/Core/Constants.lua)
+          test -n "$toc_version"
+          test "$toc_version" = "$runtime_version"
           find AtlasLootRevival -type f -name '*.lua' -print0 | xargs -0 luac5.1 -p
-          if git grep -nE 'https?://' -- AtlasLootRevival; then
+          allowed_url_pattern='^AtlasLootRevival/Locales/enUS\.lua:[0-9]+:    FEEDBACK_URL = "https://www\.curseforge\.com/wow/addons/atlasloot-revival/comments",$'
+          unexpected_urls=$(git grep -nE 'https?://' -- AtlasLootRevival | grep -vE "$allowed_url_pattern" || true)
+          if test -n "$unexpected_urls"; then
+            printf '%s\n' "$unexpected_urls"
             echo 'Runtime addon contains an external link.' >&2
             exit 1
           fi

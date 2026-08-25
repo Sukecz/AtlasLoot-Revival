@@ -6,3 +6,4 @@
 *.log
 *.luac
 .DS_Store
+/marker-editor/

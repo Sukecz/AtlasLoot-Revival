@@ -12,7 +12,13 @@ local MIN_WINDOW_SCALE = 0.75
 local MAX_WINDOW_SCALE = 1.25
 local MAX_ENCOUNTER_BUTTONS = 16
 local MAX_MAP_PINS = 32
-local MAX_LOOT_ROWS = 10
+local MAP_CLUSTER_DISTANCE = 30
+local MAX_CLUSTER_BUTTONS = 16
+local MAX_INSTANCE_MENU_BUTTONS = 16
+local MAX_FLOOR_MENU_BUTTONS = 8
+local MAX_LOOT_ROWS = 16
+local LOOT_ROW_HEIGHT = 24
+local LOOT_ROW_STEP = 25
 local TRASH_DROPS_KEY = "trash_drops"
 local selectedColor = { 0.82, 0.58, 0.20 }
 
@@ -73,6 +79,19 @@ local function SetButtonHighlight(button, selected)
     end
 end
 
+local function ShowMapPinRing(pin, alpha)
+    if pin.ring.SetDesaturated then
+        pin.ring:SetDesaturated(pin.isCluster and true or false)
+    end
+    if pin.isCluster then
+        pin.ring:SetVertexColor(0.12, 0.82, 1)
+    else
+        pin.ring:SetVertexColor(1, 1, 1)
+    end
+    pin.ring:SetAlpha(alpha or 1)
+    pin.ring:Show()
+end
+
 local function ClampWindowScale(scale)
     scale = tonumber(scale) or 1
     if scale < MIN_WINDOW_SCALE then
@@ -123,7 +142,7 @@ function MainWindow:CreateTitle(parent)
     local icon = parent:CreateTexture(nil, "ARTWORK")
     icon:SetSize(28, 28)
     icon:SetPoint("TOPLEFT", 15, -12)
-    icon:SetTexture("Interface\\Icons\\INV_Misc_Map_01")
+    icon:SetTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\minimap-icon.tga")
 
     local title = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("LEFT", icon, "RIGHT", 9, 1)
@@ -178,38 +197,85 @@ function MainWindow:CreateSidebar(parent)
     dungeonButton.background:SetAllPoints()
     dungeonButton.background:SetColorTexture(selectedColor[1], selectedColor[2], selectedColor[3], 0.24)
     dungeonButton.label = dungeonButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    dungeonButton.label:SetPoint("TOPLEFT", 31, -7)
-    dungeonButton.label:SetPoint("RIGHT", -31, 0)
+    dungeonButton.label:SetPoint("TOPLEFT", 8, -6)
+    dungeonButton.label:SetPoint("TOPRIGHT", -34, -6)
+    dungeonButton.label:SetHeight(14)
     dungeonButton.label:SetJustifyH("CENTER")
+    dungeonButton.label:SetJustifyV("TOP")
+    dungeonButton.label:SetWordWrap(false)
     dungeonButton.label:SetTextColor(1, 0.82, 0.38)
     dungeonButton.range = dungeonButton:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     dungeonButton.range:SetPoint("BOTTOM", 0, 6)
     dungeonButton.range:SetTextColor(0.55, 0.55, 0.55)
+    dungeonButton.arrow = dungeonButton:CreateTexture(nil, "ARTWORK")
+    dungeonButton.arrow:SetSize(22, 22)
+    dungeonButton.arrow:SetPoint("RIGHT", -6, 0)
+    dungeonButton.arrow:SetTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga")
+    dungeonButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    dungeonButton:SetScript("OnClick", function()
+        MainWindow:ToggleInstanceMenu()
+    end)
     self.dungeonButton = dungeonButton
 
-    local previous = CreateFrame("Button", nil, dungeonButton)
-    previous:SetPoint("LEFT", 5, 0)
-    previous:SetSize(24, 32)
-    previous.label = previous:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    previous.label:SetPoint("CENTER", -1, 0)
-    previous.label:SetText("‹")
-    previous.label:SetTextColor(0.78, 0.61, 0.25)
-    previous:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    previous:SetScript("OnClick", function()
-        MainWindow:CycleInstance(-1)
+    local instanceMenu = CreateBackdropFrame("Frame", nil, parent)
+    instanceMenu:SetWidth(266)
+    instanceMenu:SetPoint("TOPLEFT", dungeonButton, "TOPRIGHT", 6, 0)
+    instanceMenu:SetFrameLevel(parent:GetFrameLevel() + 30)
+    instanceMenu:SetClampedToScreen(true)
+    SetBackdropColor(instanceMenu, 0.025, 0.025, 0.025, 0.99)
+    instanceMenu:EnableMouseWheel(true)
+    instanceMenu:SetScript("OnMouseWheel", function(_, delta)
+        MainWindow:ScrollInstanceMenu(delta > 0 and -3 or 3)
     end)
-
-    local nextButton = CreateFrame("Button", nil, dungeonButton)
-    nextButton:SetPoint("RIGHT", -5, 0)
-    nextButton:SetSize(24, 32)
-    nextButton.label = nextButton:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    nextButton.label:SetPoint("CENTER", 1, 0)
-    nextButton.label:SetText("›")
-    nextButton.label:SetTextColor(0.78, 0.61, 0.25)
-    nextButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    nextButton:SetScript("OnClick", function()
-        MainWindow:CycleInstance(1)
+    instanceMenu.title = instanceMenu:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    instanceMenu.title:SetPoint("TOPLEFT", 10, -9)
+    instanceMenu.title:SetTextColor(1, 0.82, 0.38)
+    instanceMenu.up = CreateFrame("Button", nil, instanceMenu)
+    instanceMenu.up:SetPoint("TOPRIGHT", -31, -5)
+    instanceMenu.up:SetSize(22, 22)
+    instanceMenu.up:SetNormalTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga")
+    instanceMenu.up:GetNormalTexture():SetTexCoord(0, 1, 1, 0)
+    instanceMenu.up:SetHighlightTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga", "ADD")
+    instanceMenu.up:GetHighlightTexture():SetTexCoord(0, 1, 1, 0)
+    instanceMenu.up:SetScript("OnClick", function()
+        MainWindow:ScrollInstanceMenu(-MAX_INSTANCE_MENU_BUTTONS)
     end)
+    instanceMenu.down = CreateFrame("Button", nil, instanceMenu)
+    instanceMenu.down:SetPoint("LEFT", instanceMenu.up, "RIGHT", 2, 0)
+    instanceMenu.down:SetSize(22, 22)
+    instanceMenu.down:SetNormalTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga")
+    instanceMenu.down:SetHighlightTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga", "ADD")
+    instanceMenu.down:SetScript("OnClick", function()
+        MainWindow:ScrollInstanceMenu(MAX_INSTANCE_MENU_BUTTONS)
+    end)
+    instanceMenu.buttons = {}
+    for index = 1, MAX_INSTANCE_MENU_BUTTONS do
+        local button = CreateFrame("Button", nil, instanceMenu)
+        button:SetPoint("TOPLEFT", 7, -30 - ((index - 1) * 23))
+        button:SetPoint("TOPRIGHT", -7, -30 - ((index - 1) * 23))
+        button:SetHeight(22)
+        button.background = button:CreateTexture(nil, "BACKGROUND")
+        button.background:SetAllPoints()
+        button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.label:SetPoint("LEFT", 7, 0)
+        button.label:SetPoint("RIGHT", -59, 0)
+        button.label:SetJustifyH("LEFT")
+        button.label:SetWordWrap(false)
+        button.range = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.range:SetPoint("RIGHT", -7, 0)
+        button.range:SetWidth(48)
+        button.range:SetJustifyH("RIGHT")
+        button.range:SetTextColor(0.55, 0.55, 0.55)
+        button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+        button:SetScript("OnClick", function(clicked)
+            instanceMenu:Hide()
+            MainWindow:SelectInstance(clicked.instanceKey)
+        end)
+        button:Hide()
+        instanceMenu.buttons[index] = button
+    end
+    instanceMenu:Hide()
+    self.instanceMenu = instanceMenu
 
     self.encounterHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     self.encounterHeading:SetPoint("TOPLEFT", 12, -88)
@@ -271,33 +337,80 @@ function MainWindow:CreateMap(parent)
     self.mapHeading:SetPoint("TOPLEFT", 202, -62)
     self.mapHeading:SetTextColor(0.68, 0.68, 0.68)
 
-    self.floorNext = CreateFrame("Button", nil, parent)
-    self.floorNext:SetSize(18, 18)
-    self.floorNext:SetPoint("TOPRIGHT", -280, -55)
-    self.floorNext.label = self.floorNext:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    self.floorNext.label:SetPoint("CENTER")
-    self.floorNext.label:SetText("›")
-    self.floorNext:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    self.floorNext:SetScript("OnClick", function()
-        MainWindow:CycleFloor(1)
+    local floorButton = CreateFrame("Button", nil, parent)
+    floorButton:SetSize(232, 24)
+    floorButton:SetPoint("TOPRIGHT", -278, -55)
+    floorButton.background = floorButton:CreateTexture(nil, "BACKGROUND")
+    floorButton.background:SetAllPoints()
+    floorButton.background:SetColorTexture(selectedColor[1], selectedColor[2], selectedColor[3], 0.12)
+    floorButton.label = floorButton:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    floorButton.label:SetPoint("LEFT", 9, 0)
+    floorButton.label:SetPoint("RIGHT", -104, 0)
+    floorButton.label:SetJustifyH("LEFT")
+    floorButton.label:SetWordWrap(false)
+    floorButton.counter = floorButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    floorButton.counter:SetPoint("RIGHT", -42, 0)
+    floorButton.counter:SetWidth(48)
+    floorButton.counter:SetJustifyH("RIGHT")
+    floorButton.counter:SetTextColor(1, 0.82, 0.38)
+    floorButton.arrow = floorButton:CreateTexture(nil, "ARTWORK")
+    floorButton.arrow:SetSize(24, 24)
+    floorButton.arrow:SetPoint("RIGHT", -7, 0)
+    floorButton.arrow:SetTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga")
+    floorButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    floorButton:SetScript("OnClick", function()
+        MainWindow:ToggleFloorMenu()
     end)
-
-    self.floorLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    self.floorLabel:SetPoint("RIGHT", self.floorNext, "LEFT", -3, 0)
-    self.floorLabel:SetWidth(112)
-    self.floorLabel:SetJustifyH("RIGHT")
-    self.floorLabel:SetTextColor(0.58, 0.58, 0.58)
-
-    self.floorPrevious = CreateFrame("Button", nil, parent)
-    self.floorPrevious:SetSize(18, 18)
-    self.floorPrevious:SetPoint("RIGHT", self.floorLabel, "LEFT", -3, 0)
-    self.floorPrevious.label = self.floorPrevious:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    self.floorPrevious.label:SetPoint("CENTER")
-    self.floorPrevious.label:SetText("‹")
-    self.floorPrevious:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    self.floorPrevious:SetScript("OnClick", function()
-        MainWindow:CycleFloor(-1)
+    floorButton:SetScript("OnEnter", function(entered)
+        local instance = ns.Data.instances[MainWindow.selectedInstanceKey]
+        if instance and #instance.map.floors > 1 then
+            GameTooltip:SetOwner(entered, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine(string.format(ns.L.MULTI_FLOOR_TOOLTIP,
+                #instance.map.floors), 1, 0.82, 0.38)
+            GameTooltip:AddLine(ns.L.CLICK_TO_CHOOSE_FLOOR, 0.72, 0.72, 0.72)
+            GameTooltip:Show()
+        end
     end)
+    floorButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    floorButton:Hide()
+    self.floorButton = floorButton
+
+    local floorMenu = CreateBackdropFrame("Frame", nil, parent)
+    floorMenu:SetWidth(220)
+    floorMenu:SetPoint("TOPRIGHT", floorButton, "BOTTOMRIGHT", 0, -3)
+    floorMenu:SetFrameLevel(parent:GetFrameLevel() + 30)
+    floorMenu:SetClampedToScreen(true)
+    SetBackdropColor(floorMenu, 0.025, 0.025, 0.025, 0.99)
+    floorMenu.buttons = {}
+    for index = 1, MAX_FLOOR_MENU_BUTTONS do
+        local button = CreateFrame("Button", nil, floorMenu)
+        button:SetPoint("TOPLEFT", 7, -7 - ((index - 1) * 23))
+        button:SetPoint("TOPRIGHT", -7, -7 - ((index - 1) * 23))
+        button:SetHeight(22)
+        button.background = button:CreateTexture(nil, "BACKGROUND")
+        button.background:SetAllPoints()
+        button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.label:SetPoint("LEFT", 7, 0)
+        button.label:SetPoint("RIGHT", -48, 0)
+        button.label:SetJustifyH("LEFT")
+        button.label:SetWordWrap(false)
+        button.counter = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        button.counter:SetPoint("RIGHT", -7, 0)
+        button.counter:SetWidth(38)
+        button.counter:SetJustifyH("RIGHT")
+        button.counter:SetTextColor(0.58, 0.58, 0.58)
+        button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+        button:SetScript("OnClick", function(clicked)
+            floorMenu:Hide()
+            MainWindow:SelectFloor(clicked.floorIndex)
+        end)
+        button:Hide()
+        floorMenu.buttons[index] = button
+    end
+    floorMenu:Hide()
+    self.floorMenu = floorMenu
 
     local map = CreateBackdropFrame("Frame", nil, parent)
     map:SetSize(MAP_WIDTH + 8, MAP_HEIGHT + 8)
@@ -326,7 +439,7 @@ function MainWindow:CreateMap(parent)
     for index = 1, MAX_MAP_PINS do
         local pin = CreateFrame("Button", nil, canvas)
         pin:SetSize(22, 22)
-        pin:SetHitRectInsets(-2, -16, -2, -2)
+        pin:SetHitRectInsets(0, 0, 0, 0)
         pin:SetFrameLevel(canvas:GetFrameLevel() + 5)
         local marker = pin:CreateTexture(nil, "ARTWORK")
         marker:SetSize(18, 18)
@@ -348,24 +461,49 @@ function MainWindow:CreateMap(parent)
         number:SetShadowOffset(1, -1)
         pin.number = number
         pin:SetScript("OnClick", function(clicked)
-            MainWindow:SelectBoss(clicked.bossKey)
+            if clicked.bossKeys and #clicked.bossKeys > 1 then
+                MainWindow:ShowMapClusterMenu(clicked)
+            elseif clicked.bossKeys and clicked.bossKeys[1] then
+                if MainWindow.mapClusterMenu then
+                    MainWindow.mapClusterMenu:Hide()
+                end
+                MainWindow:SelectBoss(clicked.bossKeys[1])
+            end
         end)
         pin:SetScript("OnEnter", function(entered)
             local instanceLoot = ns.Data.loot[MainWindow.selectedInstanceKey]
-            local encounter = instanceLoot and instanceLoot[entered.bossKey]
-            if not encounter then
+            if not instanceLoot or not entered.bossKeys or not entered.bossKeys[1] then
                 return
             end
-            entered.ring:SetAlpha(entered.isSelected and 1 or 0.58)
-            entered.ring:Show()
+            ShowMapPinRing(entered, entered.isSelected and 1 or 0.88)
             GameTooltip:SetOwner(entered, "ANCHOR_RIGHT")
-            GameTooltip:AddLine(encounter.name, 1, 0.82, 0.38)
-            GameTooltip:AddLine("Click to view loot", 0.72, 0.72, 0.72)
+            if #entered.bossKeys > 1 then
+                GameTooltip:AddLine(string.format(ns.L.SHARED_LOCATION,
+                    #entered.bossKeys), 1, 0.82, 0.38)
+                for bossIndex, bossKey in ipairs(entered.bossKeys) do
+                    local encounter = instanceLoot[bossKey]
+                    if encounter then
+                        GameTooltip:AddLine(string.format("%d. %s",
+                            entered.encounterIndexes[bossIndex], encounter.name),
+                            0.92, 0.92, 0.92)
+                    end
+                end
+                GameTooltip:AddLine(" ")
+                GameTooltip:AddLine(ns.L.CLICK_TO_CHOOSE, 0.72, 0.72, 0.72)
+            else
+                local encounter = instanceLoot[entered.bossKeys[1]]
+                GameTooltip:AddLine(encounter.name, 1, 0.82, 0.38)
+                GameTooltip:AddLine(ns.L.CLICK_TO_VIEW_LOOT, 0.72, 0.72, 0.72)
+            end
             GameTooltip:Show()
         end)
         pin:SetScript("OnLeave", function(left)
             if not left.isSelected then
-                left.ring:Hide()
+                if left.isCluster then
+                    ShowMapPinRing(left, 0.82)
+                else
+                    left.ring:Hide()
+                end
             end
             GameTooltip:Hide()
         end)
@@ -373,9 +511,51 @@ function MainWindow:CreateMap(parent)
         self.mapPinRows[index] = pin
     end
 
+    local clusterMenu = CreateBackdropFrame("Frame", nil, parent)
+    clusterMenu:SetWidth(224)
+    clusterMenu:SetFrameLevel(parent:GetFrameLevel() + 30)
+    clusterMenu:SetClampedToScreen(true)
+    SetBackdropColor(clusterMenu, 0.025, 0.025, 0.025, 0.98)
+    clusterMenu.title = clusterMenu:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    clusterMenu.title:SetPoint("TOPLEFT", 10, -9)
+    clusterMenu.title:SetText(ns.L.CHOOSE_ENCOUNTER)
+    clusterMenu.title:SetTextColor(1, 0.82, 0.38)
+    local closeCluster = CreateFrame("Button", nil, clusterMenu, "UIPanelCloseButton")
+    closeCluster:SetSize(26, 26)
+    closeCluster:SetPoint("TOPRIGHT", -2, -2)
+    closeCluster:SetScript("OnClick", function()
+        clusterMenu:Hide()
+    end)
+    clusterMenu.buttons = {}
+    for index = 1, MAX_CLUSTER_BUTTONS do
+        local button = CreateFrame("Button", nil, clusterMenu)
+        button:SetPoint("TOPLEFT", 7, -31 - ((index - 1) * 22))
+        button:SetPoint("TOPRIGHT", -7, -31 - ((index - 1) * 22))
+        button:SetHeight(21)
+        button.number = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        button.number:SetPoint("LEFT", 5, 0)
+        button.number:SetWidth(24)
+        button.number:SetJustifyH("RIGHT")
+        button.number:SetTextColor(1, 0.82, 0.38)
+        button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.label:SetPoint("LEFT", button.number, "RIGHT", 8, 0)
+        button.label:SetPoint("RIGHT", -5, 0)
+        button.label:SetJustifyH("LEFT")
+        button.label:SetWordWrap(false)
+        button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+        button:SetScript("OnClick", function(clicked)
+            clusterMenu:Hide()
+            MainWindow:SelectBoss(clicked.bossKey)
+        end)
+        button:Hide()
+        clusterMenu.buttons[index] = button
+    end
+    clusterMenu:Hide()
+    self.mapClusterMenu = clusterMenu
+
     local note = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     note:SetPoint("TOPLEFT", map, "BOTTOMLEFT", 5, -9)
-    note:SetText("Click a numbered marker to inspect its loot.")
+    note:SetText(ns.L.MAP_HINT)
     note:SetTextColor(0.48, 0.48, 0.48)
 end
 
@@ -384,6 +564,10 @@ function MainWindow:CreateLootPanel(parent)
     panel:SetPoint("TOPLEFT", 674, -55)
     panel:SetPoint("BOTTOMRIGHT", -12, 34)
     SetBackdropColor(panel, 0.035, 0.035, 0.035, 0.96)
+    panel:EnableMouseWheel(true)
+    panel:SetScript("OnMouseWheel", function(_, delta)
+        MainWindow:ScrollLootList(delta > 0 and -4 or 4)
+    end)
     self.lootPanel = panel
 
     self.bossTitle = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -437,27 +621,33 @@ function MainWindow:CreateLootPanel(parent)
     self.lootRows = {}
     for index = 1, MAX_LOOT_ROWS do
         local row = CreateFrame("Button", nil, panel)
-        row:SetPoint("TOPLEFT", 10, -94 - ((index - 1) * 40))
-        row:SetPoint("TOPRIGHT", -10, -94 - ((index - 1) * 40))
-        row:SetHeight(36)
+        row:SetPoint("TOPLEFT", 9, -94 - ((index - 1) * LOOT_ROW_STEP))
+        row:SetPoint("TOPRIGHT", -9, -94 - ((index - 1) * LOOT_ROW_STEP))
+        row:SetHeight(LOOT_ROW_HEIGHT)
         row.background = row:CreateTexture(nil, "BACKGROUND")
         row.background:SetAllPoints()
         row.background:SetColorTexture(1, 1, 1, 0.025)
         row.icon = row:CreateTexture(nil, "ARTWORK")
-        row.icon:SetSize(30, 30)
-        row.icon:SetPoint("LEFT", 5, 0)
+        row.icon:SetSize(20, 20)
+        row.icon:SetPoint("LEFT", 4, 0)
         row.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-        row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, -2)
-        row.name:SetPoint("RIGHT", -78, 0)
+        row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 6, 0)
+        row.name:SetPoint("TOPRIGHT", -64, 0)
+        row.name:SetHeight(12)
         row.name:SetJustifyH("LEFT")
-        row.id = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.id:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, 2)
-        row.id:SetPoint("RIGHT", -78, 0)
-        row.id:SetJustifyH("LEFT")
-        row.id:SetTextColor(0.45, 0.45, 0.45)
+        row.name:SetJustifyV("TOP")
+        row.name:SetWordWrap(false)
+        row.meta = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.meta:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 6, 0)
+        row.meta:SetPoint("BOTTOMRIGHT", -64, 0)
+        row.meta:SetHeight(10)
+        row.meta:SetJustifyH("LEFT")
+        row.meta:SetJustifyV("BOTTOM")
+        row.meta:SetWordWrap(false)
+        row.meta:SetTextColor(0.45, 0.45, 0.45)
         row.chance = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.chance:SetPoint("RIGHT", -5, 0)
+        row.chance:SetPoint("RIGHT", -4, 0)
         row.chance:SetJustifyH("RIGHT")
         row.chance:SetTextColor(0.92, 0.72, 0.30)
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
@@ -478,6 +668,10 @@ function MainWindow:CreateLootPanel(parent)
                     GameTooltip:AddLine(" ")
                     GameTooltip:AddLine(string.format(ns.L.STARTS_QUEST_TOOLTIP,
                         entered.questID), 1, 0.82, 0.38)
+                end
+                if entered.turnInToken then
+                    GameTooltip:AddLine(" ")
+                    GameTooltip:AddLine(ns.L.TURN_IN_TOKEN_TOOLTIP, 1, 0.82, 0.38)
                 end
                 if entered.factionAvailability == "alliance" then
                     GameTooltip:AddLine(ns.L.ALLIANCE_ONLY, 0.45, 0.65, 1)
@@ -648,10 +842,79 @@ function MainWindow:Create()
     self:CreateLootPanel(content)
     self:CreateResizeHandle(frame)
 
+    local feedbackButton = CreateBackdropFrame("Button", nil, content)
+    feedbackButton:SetSize(18, 18)
+    feedbackButton:SetPoint("BOTTOMLEFT", 14, 7)
+    SetBackdropColor(feedbackButton, 0.04, 0.16, 0.22, 0.98)
+    feedbackButton.label = feedbackButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    feedbackButton.label:SetPoint("CENTER", 0, 1)
+    feedbackButton.label:SetText("?")
+    feedbackButton.label:SetTextColor(0.20, 0.82, 1)
+    feedbackButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    feedbackButton:SetScript("OnEnter", function(entered)
+        GameTooltip:SetOwner(entered, "ANCHOR_TOPLEFT")
+        GameTooltip:AddLine(ns.L.FEEDBACK_TITLE, 1, 0.82, 0.38)
+        GameTooltip:AddLine(ns.L.FEEDBACK_BODY, 0.82, 0.82, 0.82, true)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(ns.L.FEEDBACK_CLICK, 0.20, 0.82, 1)
+        GameTooltip:Show()
+    end)
+    feedbackButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    feedbackButton:SetScript("OnClick", function()
+        MainWindow:ShowFeedbackDialog()
+    end)
+    self.feedbackButton = feedbackButton
+
+    local feedbackDialog = CreateBackdropFrame("Frame", nil, content)
+    feedbackDialog:SetSize(500, 126)
+    feedbackDialog:SetPoint("CENTER", content, "CENTER", 0, 5)
+    feedbackDialog:SetFrameLevel(content:GetFrameLevel() + 50)
+    feedbackDialog:SetClampedToScreen(true)
+    SetBackdropColor(feedbackDialog, 0.025, 0.025, 0.025, 0.99)
+    feedbackDialog.title = feedbackDialog:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    feedbackDialog.title:SetPoint("TOPLEFT", 16, -15)
+    feedbackDialog.title:SetText(ns.L.FEEDBACK_COPY_TITLE)
+    feedbackDialog.title:SetTextColor(1, 0.82, 0.38)
+    feedbackDialog.body = feedbackDialog:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    feedbackDialog.body:SetPoint("TOPLEFT", feedbackDialog.title, "BOTTOMLEFT", 0, -7)
+    feedbackDialog.body:SetText(ns.L.FEEDBACK_COPY_BODY)
+    feedbackDialog.body:SetTextColor(0.68, 0.68, 0.68)
+    feedbackDialog.editBox = CreateFrame("EditBox", nil, feedbackDialog, "InputBoxTemplate")
+    feedbackDialog.editBox:SetPoint("BOTTOMLEFT", 16, 16)
+    feedbackDialog.editBox:SetPoint("BOTTOMRIGHT", -16, 16)
+    feedbackDialog.editBox:SetHeight(28)
+    feedbackDialog.editBox:SetAutoFocus(false)
+    feedbackDialog.editBox:SetFontObject("GameFontHighlight")
+    feedbackDialog.editBox:SetScript("OnEscapePressed", function(editBox)
+        editBox:ClearFocus()
+        feedbackDialog:Hide()
+    end)
+    feedbackDialog.editBox:SetScript("OnEnterPressed", function(editBox)
+        editBox:HighlightText()
+    end)
+    feedbackDialog.editBox:SetScript("OnTextChanged", function(editBox, userInput)
+        if userInput then
+            editBox:SetText(ns.L.FEEDBACK_URL)
+            editBox:HighlightText()
+        end
+    end)
+    local closeFeedback = CreateFrame("Button", nil, feedbackDialog, "UIPanelCloseButton")
+    closeFeedback:SetPoint("TOPRIGHT", -3, -3)
+    closeFeedback:SetScript("OnClick", function()
+        feedbackDialog.editBox:ClearFocus()
+        feedbackDialog:Hide()
+    end)
+    feedbackDialog:Hide()
+    self.feedbackDialog = feedbackDialog
+
     local footer = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    footer:SetPoint("BOTTOMLEFT", 16, 14)
+    footer:SetPoint("LEFT", feedbackButton, "RIGHT", 7, 0)
+    footer:SetPoint("RIGHT", content, "BOTTOMRIGHT", -34, 16)
     footer:SetText(ns.L.STATUS_LIVE_QA)
-    footer:SetTextColor(0.42, 0.42, 0.42)
+    footer:SetTextColor(0.52, 0.58, 0.60)
+    footer:SetJustifyH("LEFT")
 
     table.insert(UISpecialFrames, frame:GetName())
     local database = ns.modules.Database.data
@@ -679,10 +942,154 @@ function MainWindow:Create()
     frame:Hide()
 end
 
+function MainWindow:ShowFeedbackDialog()
+    if not self.feedbackDialog then
+        return
+    end
+    if self.instanceMenu then
+        self.instanceMenu:Hide()
+    end
+    if self.floorMenu then
+        self.floorMenu:Hide()
+    end
+    self.feedbackDialog:Show()
+    self.feedbackDialog.editBox:SetText(ns.L.FEEDBACK_URL)
+    self.feedbackDialog.editBox:SetFocus()
+    self.feedbackDialog.editBox:HighlightText()
+end
+
 function MainWindow:RefreshContentTypeButtons()
     for contentType, button in pairs(self.contentTypeButtons or {}) do
         SetButtonHighlight(button, contentType == self.selectedContentType)
     end
+end
+
+function MainWindow:RefreshInstanceMenu()
+    local menu = self.instanceMenu
+    if not menu then
+        return
+    end
+    local order = self.instanceOrder or GetAvailableInstanceKeys(self.selectedContentType)
+    local visibleCount = math.min(#order, MAX_INSTANCE_MENU_BUTTONS)
+    local maxOffset = math.max(0, #order - MAX_INSTANCE_MENU_BUTTONS)
+    self.instanceMenuOffset = math.max(0,
+        math.min(self.instanceMenuOffset or 0, maxOffset))
+    menu:SetHeight(37 + (visibleCount * 23))
+    local title = self.selectedContentType == "raid"
+        and ns.L.SELECT_RAID or ns.L.SELECT_DUNGEON
+    if #order > MAX_INSTANCE_MENU_BUTTONS then
+        local firstVisible = self.instanceMenuOffset + 1
+        local lastVisible = math.min(#order,
+            self.instanceMenuOffset + MAX_INSTANCE_MENU_BUTTONS)
+        title = string.format("%s  %d–%d / %d", title,
+            firstVisible, lastVisible, #order)
+    end
+    menu.title:SetText(title)
+    if #order > MAX_INSTANCE_MENU_BUTTONS then
+        menu.up:Show()
+        menu.down:Show()
+    else
+        menu.up:Hide()
+        menu.down:Hide()
+    end
+    for index, button in ipairs(menu.buttons) do
+        local instanceKey = order[self.instanceMenuOffset + index]
+        local instance = instanceKey and ns.Data.instances[instanceKey]
+        if instance then
+            button.instanceKey = instanceKey
+            button.label:SetText(instance.name)
+            button.range:SetText(string.format("%d–%d", instance.levelMin, instance.levelMax))
+            SetButtonHighlight(button, instanceKey == self.selectedInstanceKey)
+            button:Show()
+        else
+            button.instanceKey = nil
+            button:Hide()
+        end
+    end
+end
+
+function MainWindow:ScrollInstanceMenu(delta)
+    local order = self.instanceOrder or GetAvailableInstanceKeys(self.selectedContentType)
+    local maxOffset = math.max(0, #order - MAX_INSTANCE_MENU_BUTTONS)
+    local nextOffset = math.max(0,
+        math.min((self.instanceMenuOffset or 0) + delta, maxOffset))
+    if nextOffset ~= self.instanceMenuOffset then
+        self.instanceMenuOffset = nextOffset
+        self:RefreshInstanceMenu()
+    end
+end
+
+function MainWindow:ToggleInstanceMenu()
+    local menu = self.instanceMenu
+    if not menu then
+        return
+    end
+    if menu:IsShown() then
+        menu:Hide()
+        return
+    end
+    if self.floorMenu then
+        self.floorMenu:Hide()
+    end
+    if self.mapClusterMenu then
+        self.mapClusterMenu:Hide()
+    end
+    local order = self.instanceOrder or GetAvailableInstanceKeys(self.selectedContentType)
+    local selectedIndex = 1
+    for index, instanceKey in ipairs(order) do
+        if instanceKey == self.selectedInstanceKey then
+            selectedIndex = index
+            break
+        end
+    end
+    local maxOffset = math.max(0, #order - MAX_INSTANCE_MENU_BUTTONS)
+    self.instanceMenuOffset = math.max(0,
+        math.min(selectedIndex - math.ceil(MAX_INSTANCE_MENU_BUTTONS / 2), maxOffset))
+    self:RefreshInstanceMenu()
+    menu:Show()
+end
+
+function MainWindow:RefreshFloorMenu()
+    local menu = self.floorMenu
+    local instance = ns.Data.instances[self.selectedInstanceKey]
+    if not menu or not instance then
+        return
+    end
+    local floors = instance.map.floors
+    menu:SetHeight(14 + (#floors * 23))
+    for index, button in ipairs(menu.buttons) do
+        local floor = floors[index]
+        if floor then
+            button.floorIndex = floor.index
+            button.label:SetText(floor.name)
+            button.counter:SetText(string.format("%d / %d", index, #floors))
+            SetButtonHighlight(button, floor.index == self.selectedFloor)
+            button:Show()
+        else
+            button.floorIndex = nil
+            button:Hide()
+        end
+    end
+end
+
+function MainWindow:ToggleFloorMenu()
+    local menu = self.floorMenu
+    local instance = ns.Data.instances[self.selectedInstanceKey]
+    if not menu or not instance or #instance.map.floors < 2 then
+        return
+    end
+    if menu:IsShown() then
+        menu:Hide()
+        return
+    end
+    if self.instanceMenu then
+        self.instanceMenu:Hide()
+    end
+    if self.mapClusterMenu then
+        self.mapClusterMenu:Hide()
+    end
+    self:RefreshFloorMenu()
+    menu:Show()
 end
 
 function MainWindow:RefreshSidebar()
@@ -693,6 +1100,8 @@ function MainWindow:RefreshSidebar()
     end
 
     self.dungeonButton.label:SetText(instance.name)
+    self.dungeonButton.label:SetFont(STANDARD_TEXT_FONT,
+        #instance.name > 18 and 10 or 12, "")
     self.dungeonButton.range:SetText(string.format(ns.L.LEVEL_RANGE,
         instance.levelMin, instance.levelMax))
     local entryKeys = GetInstanceEntryKeys(instance)
@@ -728,6 +1137,108 @@ function MainWindow:RefreshSidebar()
     end
 end
 
+function MainWindow:ShowMapClusterMenu(pin)
+    local menu = self.mapClusterMenu
+    local instanceLoot = ns.Data.loot[self.selectedInstanceKey]
+    if not menu or not instanceLoot or not pin.bossKeys or #pin.bossKeys < 2 then
+        return
+    end
+    if menu:IsShown() and menu.pin == pin then
+        menu:Hide()
+        menu.pin = nil
+        return
+    end
+
+    menu.pin = pin
+    menu:ClearAllPoints()
+    menu:SetPoint("TOPLEFT", pin, "BOTTOMRIGHT", 5, 5)
+    menu:SetHeight(39 + (#pin.bossKeys * 22))
+    for index, button in ipairs(menu.buttons) do
+        local bossKey = pin.bossKeys[index]
+        local encounter = bossKey and instanceLoot[bossKey]
+        if encounter then
+            button.bossKey = bossKey
+            button.number:SetText(pin.encounterIndexes[index] .. ".")
+            button.label:SetText(encounter.name)
+            button:Show()
+        else
+            button.bossKey = nil
+            button:Hide()
+        end
+    end
+    menu:Show()
+end
+
+function MainWindow:BuildMapClusters(instance, instanceLoot, floorIndex)
+    local points = {}
+    for encounterIndex, bossKey in ipairs(instance.bosses) do
+        local boss = instanceLoot[bossKey]
+        if boss and boss.floor == floorIndex and boss.x and boss.y then
+            table.insert(points, {
+                x = boss.x,
+                y = boss.y,
+                bossKey = bossKey,
+                encounterIndex = encounterIndex,
+            })
+        end
+    end
+
+    local parents = {}
+    for index = 1, #points do
+        parents[index] = index
+    end
+    local function Find(index)
+        while parents[index] ~= index do
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        end
+        return index
+    end
+    local function Union(left, right)
+        local leftRoot = Find(left)
+        local rightRoot = Find(right)
+        if leftRoot ~= rightRoot then
+            parents[rightRoot] = leftRoot
+        end
+    end
+    local distanceSquared = MAP_CLUSTER_DISTANCE * MAP_CLUSTER_DISTANCE
+    for left = 1, #points do
+        for right = left + 1, #points do
+            local deltaX = (points[left].x - points[right].x) * MAP_WIDTH
+            local deltaY = (points[left].y - points[right].y) * MAP_HEIGHT
+            if (deltaX * deltaX) + (deltaY * deltaY) <= distanceSquared then
+                Union(left, right)
+            end
+        end
+    end
+
+    local clustersByRoot = {}
+    local clusters = {}
+    for index, point in ipairs(points) do
+        local root = Find(index)
+        local cluster = clustersByRoot[root]
+        if not cluster then
+            cluster = {
+                x = 0,
+                y = 0,
+                bossKeys = {},
+                encounterIndexes = {},
+            }
+            clustersByRoot[root] = cluster
+            table.insert(clusters, cluster)
+        end
+        cluster.x = cluster.x + point.x
+        cluster.y = cluster.y + point.y
+        table.insert(cluster.bossKeys, point.bossKey)
+        table.insert(cluster.encounterIndexes, point.encounterIndex)
+    end
+    for _, cluster in ipairs(clusters) do
+        cluster.x = cluster.x / #cluster.bossKeys
+        cluster.y = cluster.y / #cluster.bossKeys
+    end
+    return clusters
+end
+
 function MainWindow:RefreshMap()
     local instance = ns.Data.instances[self.selectedInstanceKey]
     local instanceLoot = instance and ns.Data.loot[instance.key]
@@ -740,49 +1251,77 @@ function MainWindow:RefreshMap()
     local floorIndex = self.selectedFloor or 1
     local floorData = mapData.floors[floorIndex] or mapData.floors[1]
     self.selectedFloor = floorData.index
-    self.floorLabel:SetText(floorData.name)
     if #mapData.floors > 1 then
-        self.floorLabel:Show()
-        self.floorPrevious:Show()
-        self.floorNext:Show()
+        self.floorButton.label:SetText(floorData.name)
+        self.floorButton.counter:SetText(string.format("%d / %d",
+            floorData.index, #mapData.floors))
+        self.floorButton:Show()
+        self:RefreshFloorMenu()
     else
-        self.floorLabel:Hide()
-        self.floorPrevious:Hide()
-        self.floorNext:Hide()
+        self.floorButton:Hide()
+        self.floorMenu:Hide()
     end
     local tileCount = mapData.columns * mapData.rows
     for tileIndex, tile in ipairs(self.mapTiles) do
         if tileIndex <= tileCount then
             local folder = mapData.textureFolder
-            tile:SetTexture("Interface\\WorldMap\\" .. folder .. "\\"
-                .. folder .. floorData.index .. "_" .. tileIndex)
+            local fileName
+            if mapData.tileFilePattern == "tileIndexOnly" then
+                fileName = folder .. tileIndex
+            else
+                fileName = folder .. (floorData.textureIndex or floorData.index) .. "_" .. tileIndex
+            end
+            tile:SetTexture("Interface\\WorldMap\\" .. folder .. "\\" .. fileName)
             tile:Show()
         else
             tile:Hide()
         end
     end
 
+    if self.mapClusterMenu then
+        self.mapClusterMenu:Hide()
+        self.mapClusterMenu.pin = nil
+    end
+
+    local coordinateGroupOrder = self:BuildMapClusters(instance,
+        instanceLoot, floorData.index)
+
     self.mapPins = {}
     local pinSlot = 1
-    for encounterIndex, bossKey in ipairs(instance.bosses) do
-        local boss = instanceLoot[bossKey]
-        if boss and boss.floor == floorData.index and boss.x and boss.y then
+    for _, group in ipairs(coordinateGroupOrder) do
+        if pinSlot <= #self.mapPinRows then
+            local markerX = math.max(12,
+                math.min(MAP_WIDTH - 42, group.x * MAP_WIDTH))
+            local markerY = math.max(12,
+                math.min(MAP_HEIGHT - 12, group.y * MAP_HEIGHT))
             local pin = self.mapPinRows[pinSlot]
             pin:ClearAllPoints()
             pin:SetPoint("CENTER", self.mapCanvas, "TOPLEFT",
-                boss.x * MAP_WIDTH, -(boss.y * MAP_HEIGHT))
-            pin.bossKey = bossKey
-            pin.number:SetText(encounterIndex)
+                markerX, -markerY)
+            pin.bossKeys = group.bossKeys
+            pin.encounterIndexes = group.encounterIndexes
+            pin.isCluster = #group.bossKeys > 1
+            if #group.bossKeys > 1 then
+                pin.number:SetText("")
+                ShowMapPinRing(pin, 0.82)
+            else
+                pin.number:SetText(group.encounterIndexes[1])
+                pin.ring:Hide()
+            end
             pin.isSelected = false
-            pin.ring:Hide()
             pin:Show()
-            self.mapPins[bossKey] = pin
+            for _, bossKey in ipairs(group.bossKeys) do
+                self.mapPins[bossKey] = pin
+            end
             pinSlot = pinSlot + 1
         end
     end
     for index = pinSlot, #self.mapPinRows do
         local pin = self.mapPinRows[index]
-        pin.bossKey = nil
+        pin.bossKeys = nil
+        pin.encounterIndexes = nil
+        pin.isCluster = nil
+        pin.ring:Hide()
         pin:Hide()
     end
 end
@@ -794,6 +1333,9 @@ function MainWindow:SelectContentType(contentType)
     local order = GetAvailableInstanceKeys(contentType)
     if #order == 0 then
         return
+    end
+    if self.instanceMenu then
+        self.instanceMenu:Hide()
     end
     if self.selectedContentType == contentType then
         return
@@ -810,6 +1352,13 @@ function MainWindow:SelectInstance(instanceKey)
     local flavor = ns.Constants.GetClientFlavor()
     if not instance or not instance.clientFlavors[flavor] then
         return
+    end
+
+    if self.instanceMenu then
+        self.instanceMenu:Hide()
+    end
+    if self.floorMenu then
+        self.floorMenu:Hide()
     end
 
     self.selectedInstanceKey = instanceKey
@@ -904,35 +1453,29 @@ function MainWindow:ScrollEncounterList(delta)
     end
 end
 
-function MainWindow:CycleFloor(delta)
+function MainWindow:SelectFloor(floorIndex)
     local instance = ns.Data.instances[self.selectedInstanceKey]
     if not instance or #instance.map.floors < 2 then
         return
     end
-
-    local floorCount = #instance.map.floors
-    self.selectedFloor = ((self.selectedFloor - 1 + delta) % floorCount) + 1
+    local selectedFloor
+    for _, floor in ipairs(instance.map.floors) do
+        if floor.index == floorIndex then
+            selectedFloor = floor.index
+            break
+        end
+    end
+    if not selectedFloor then
+        return
+    end
+    if self.floorMenu then
+        self.floorMenu:Hide()
+    end
+    self.selectedFloor = selectedFloor
     self:RefreshMap()
     if self.selectedBossKey then
         self:SelectBoss(self.selectedBossKey, true)
     end
-end
-
-function MainWindow:CycleInstance(delta)
-    local order = self.instanceOrder or GetAvailableInstanceKeys(self.selectedContentType)
-    if #order < 2 then
-        return
-    end
-
-    local currentIndex = 1
-    for index, key in ipairs(order) do
-        if key == self.selectedInstanceKey then
-            currentIndex = index
-            break
-        end
-    end
-    local nextIndex = ((currentIndex - 1 + delta) % #order) + 1
-    self:SelectInstance(order[nextIndex])
 end
 
 function MainWindow:SelectBoss(bossKey, keepFloor)
@@ -940,6 +1483,10 @@ function MainWindow:SelectBoss(bossKey, keepFloor)
     local boss = ns.Data.loot[instanceKey] and ns.Data.loot[instanceKey][bossKey]
     if not boss then
         return
+    end
+    if self.mapClusterMenu then
+        self.mapClusterMenu:Hide()
+        self.mapClusterMenu.pin = nil
     end
     if boss.kind ~= "trashDrops" and not keepFloor
         and boss.floor and boss.floor ~= self.selectedFloor then
@@ -1059,7 +1606,12 @@ function MainWindow:SelectBoss(bossKey, keepFloor)
     elseif boss.availability == "sharedFourHorsemenChest" then
         meta = meta .. "  •  " .. ns.L.SHARED_CHEST
     end
-    if boss.kind ~= "trashDrops" and (not boss.x or not boss.y) then
+    if boss.positionPrecision == "eventAnchor" then
+        meta = meta .. "  •  " .. ns.L.MAP_EVENT_ANCHOR
+    elseif boss.positionPrecision == "routeAnchor" then
+        meta = meta .. "  •  " .. ns.L.MAP_ROUTE_ANCHOR
+    elseif boss.kind ~= "trashDrops" and boss.locationScope ~= "preInstance"
+        and (not boss.x or not boss.y) then
         meta = meta .. "  •  " .. ns.L.MAP_POSITION_PENDING
     end
     self.bossMeta:SetText(meta)
@@ -1067,15 +1619,25 @@ function MainWindow:SelectBoss(bossKey, keepFloor)
     for key, button in pairs(self.bossButtons) do
         SetButtonHighlight(button, key == bossKey)
     end
-    for key, pin in pairs(self.mapPins) do
-        if key == bossKey then
+    for _, pin in ipairs(self.mapPinRows) do
+        local containsSelectedBoss = false
+        for _, pinBossKey in ipairs(pin.bossKeys or {}) do
+            if pinBossKey == bossKey then
+                containsSelectedBoss = true
+                break
+            end
+        end
+        if containsSelectedBoss then
             pin.isSelected = true
-            pin.ring:SetAlpha(1)
-            pin.ring:Show()
+            ShowMapPinRing(pin, 1)
             pin.number:SetTextColor(1, 0.92, 0.55)
         else
             pin.isSelected = false
-            pin.ring:Hide()
+            if pin.isCluster then
+                ShowMapPinRing(pin, 0.82)
+            else
+                pin.ring:Hide()
+            end
             pin.number:SetTextColor(1, 0.82, 0.32)
         end
     end
@@ -1140,6 +1702,7 @@ function MainWindow:RefreshLoot()
             row.questID = entry.questID
             row.questIDs = entry.questIDs
             row.factionAvailability = entry.factionAvailability
+            row.turnInToken = entry.turnInToken
             row.dropChance = entry.dropChances and entry.dropChances[flavor]
             row.dropChanceStatus = entry.dropChanceStatus
             row.isTrashDrop = boss.kind == "trashDrops"
@@ -1153,16 +1716,14 @@ function MainWindow:RefreshLoot()
             end
             local factionLabel = row.factionAvailability == "alliance" and "Alliance"
                 or (row.factionAvailability == "horde" and "Horde" or nil)
-            if row.questIDs then
-                row.id:SetText(string.format("Item %d  •  Quests %s%s",
-                    itemID, JoinQuestIDs(row.questIDs),
-                    factionLabel and ("  •  " .. factionLabel) or ""))
-            elseif row.questID then
-                row.id:SetText(string.format("Item %d  •  Quest %d%s", itemID, row.questID,
-                    factionLabel and ("  •  " .. factionLabel) or ""))
-            else
-                row.id:SetText("Item " .. itemID)
+            local itemMeta = {}
+            if row.turnInToken then
+                table.insert(itemMeta, ns.L.TURN_IN_TOKEN)
             end
+            if factionLabel then
+                table.insert(itemMeta, factionLabel)
+            end
+            row.meta:SetText(table.concat(itemMeta, "  •  "))
             if row.category == "questObjective" then
                 row.chance:SetText(ns.L.QUEST_ITEM)
                 row.chance:SetTextColor(1, 0.82, 0.38)
@@ -1190,6 +1751,7 @@ function MainWindow:RefreshLoot()
             row.questID = nil
             row.questIDs = nil
             row.factionAvailability = nil
+            row.turnInToken = nil
             row.dropChance = nil
             row.dropChanceStatus = nil
             row.isTrashDrop = nil
@@ -1258,6 +1820,16 @@ end
 function MainWindow:Toggle()
     self:Create()
     if self.frame:IsShown() then
+        if self.instanceMenu then
+            self.instanceMenu:Hide()
+        end
+        if self.floorMenu then
+            self.floorMenu:Hide()
+        end
+        if self.feedbackDialog then
+            self.feedbackDialog.editBox:ClearFocus()
+            self.feedbackDialog:Hide()
+        end
         self.frame:Hide()
     else
         self:SelectCurrentInstance()

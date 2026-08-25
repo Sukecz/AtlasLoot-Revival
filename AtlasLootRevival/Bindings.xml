@@ -1,0 +1,7 @@
+<Bindings>
+    <Binding name="ATLASLOOTREVIVAL_TOGGLE" header="ATLASLOOTREVIVAL" category="ADDONS">
+        if SlashCmdList and SlashCmdList.ATLASLOOTREVIVAL then
+            SlashCmdList.ATLASLOOTREVIVAL("")
+        end
+    </Binding>
+</Bindings>

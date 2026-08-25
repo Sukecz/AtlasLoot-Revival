@@ -9,6 +9,7 @@ function Events:OnAddonLoaded(loadedAddon)
     end
 
     ns.modules.Database:Initialize()
+    ns.modules.MinimapButton:Initialize()
     ns.modules.SlashCommands:Initialize()
     self.frame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
     self.frame:RegisterEvent("ITEM_DATA_LOAD_RESULT")

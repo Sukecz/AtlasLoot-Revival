@@ -39,6 +39,17 @@ jobs:
           test -n "$CF_API_KEY"
           test -f AtlasLootRevival/AtlasLootRevival.toc
           test ! -e AtlasLootRevival/AtlasLootRevival_TBC.toc
+          test -f AtlasLootRevival/Bindings.xml
+          test -f AtlasLootRevival/UI/MinimapButton.lua
+          test -f AtlasLootRevival/assets/dropdown-chevron.tga
+          test -f AtlasLootRevival/assets/minimap-icon.tga
+          toc_version=$(sed -n 's/^## Version: //p' AtlasLootRevival/AtlasLootRevival.toc)
+          runtime_version=$(sed -n 's/^[[:space:]]*VERSION = "\([^"]*\)",/\1/p' AtlasLootRevival/Core/Constants.lua)
+          release_ref="${{ inputs.release_ref || github.ref_name }}"
+          release_version=${release_ref#v}
+          test -n "$toc_version"
+          test "$toc_version" = "$runtime_version"
+          test "$toc_version" = "$release_version"
           find AtlasLootRevival -type f -name '*.lua' -print0 | xargs -0 luac5.1 -p
 
       - name: Package and publish addon

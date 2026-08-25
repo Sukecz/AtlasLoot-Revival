@@ -2,9 +2,9 @@
 ## Title: AtlasLoot Revival
 ## Notes: Maps, bosses and loot — revived for modern WoW Classic.
 ## Author: AtlasLoot Revival contributors
-## Version: 0.1.0-alpha.1
+## Version: 0.1.0
 ## SavedVariables: AtlasLootRevivalDB
-## IconTexture: Interface\Icons\INV_Misc_Map_01
+## IconTexture: Interface\AddOns\AtlasLootRevival\assets\minimap-icon.tga
 ## Category-enUS: Loot
 ## X-Curse-Project-ID: 1666354
 ## X-License: MIT
@@ -18,5 +18,6 @@ Core\Database.lua
 Data\Instances.lua
 Data\Loot.lua
 UI\MainWindow.lua
+UI\MinimapButton.lua
 Core\SlashCommands.lua
 Core\Events.lua

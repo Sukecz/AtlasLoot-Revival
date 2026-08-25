@@ -331,12 +331,12 @@ ns.Data.instances = {
             columns = 4,
             rows = 3,
             floors = {
-                { index = 1, name = "Arachnid Quarter" },
-                { index = 2, name = "Plague Quarter" },
+                { index = 1, name = "Construct Quarter" },
+                { index = 2, name = "Arachnid Quarter" },
                 { index = 3, name = "Military Quarter" },
-                { index = 4, name = "Construct Quarter" },
-                { index = 5, name = "Frostwyrm Lair" },
-                { index = 6, name = "Kel'Thuzad" },
+                { index = 4, name = "Plague Quarter" },
+                { index = 5, name = "Naxxramas Overview" },
+                { index = 6, name = "Frostwyrm Lair" },
             },
         },
         bosses = {
@@ -477,6 +477,7 @@ ns.Data.instances = {
         levelMax = 60,
         map = {
             textureFolder = "RuinsofAhnQiraj",
+            tileFilePattern = "tileIndexOnly",
             columns = 4,
             rows = 3,
             floors = {
@@ -831,13 +832,7 @@ ns.Data.instances = {
             columns = 4,
             rows = 3,
             floors = {
-                { index = 1, name = "Tazz'Alaor" },
-                { index = 2, name = "The Rookery" },
-                { index = 3, name = "Hordemar City" },
-                { index = 4, name = "Blackrock Spire — Floor 4" },
-                { index = 5, name = "Blackrock Spire — Floor 5" },
-                { index = 6, name = "Chamber of Battle" },
-                { index = 7, name = "Hall of Blackhand" },
+                { index = 1, textureIndex = 7, name = "Upper Blackrock Spire" },
             },
         },
         bosses = {
@@ -896,6 +891,7 @@ ns.Data.instances = {
         levelMax = 54,
         map = {
             textureFolder = "ZulFarrak",
+            tileFilePattern = "tileIndexOnly",
             columns = 4,
             rows = 3,
             floors = {
@@ -932,6 +928,7 @@ ns.Data.instances = {
         levelMax = 60,
         map = {
             textureFolder = "ZulGurub",
+            tileFilePattern = "tileIndexOnly",
             columns = 4,
             rows = 3,
             floors = {

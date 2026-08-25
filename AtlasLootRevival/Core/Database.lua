@@ -10,6 +10,9 @@ local defaults = {
             selectedContentType = "dungeon",
             selectedInstances = {},
         },
+        minimap = {
+            angle = 225,
+        },
         window = {},
     },
 }
@@ -27,8 +30,24 @@ local function ApplyDefaults(target, source)
     end
 end
 
+local function Migrate(database)
+    local version = tonumber(database.schemaVersion) or 0
+
+    if version < 2 then
+        database.settings = type(database.settings) == "table" and database.settings or {}
+        database.settings.minimap = type(database.settings.minimap) == "table"
+            and database.settings.minimap or {}
+        if type(database.settings.minimap.angle) ~= "number" then
+            database.settings.minimap.angle = defaults.settings.minimap.angle
+        end
+    end
+
+    database.schemaVersion = ns.Constants.DATABASE_VERSION
+end
+
 function Database:Initialize()
     AtlasLootRevivalDB = AtlasLootRevivalDB or {}
+    Migrate(AtlasLootRevivalDB)
     ApplyDefaults(AtlasLootRevivalDB, defaults)
     self.data = AtlasLootRevivalDB
 end
