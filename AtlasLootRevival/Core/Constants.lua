@@ -2,8 +2,8 @@ local _, ns = ...
 
 ns.Constants = {
     DISPLAY_NAME = "AtlasLoot Revival",
-    VERSION = "0.1.1",
-    DATABASE_VERSION = 2,
+    VERSION = "0.1.2",
+    DATABASE_VERSION = 3,
     CLIENT_ERA = "era",
     CLIENT_TBC = "tbc",
 }

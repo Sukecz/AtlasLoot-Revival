@@ -27,6 +27,11 @@ local LOOT_ROW_HEIGHT = 24
 local LOOT_ROW_STEP = 25
 local TRASH_DROPS_KEY = "trash_drops"
 local selectedColor = { 0.82, 0.58, 0.20 }
+local MAP_MARKER_STYLES = {
+    small = { marker = 15, ring = 20, font = 11 },
+    normal = { marker = 18, ring = 24, font = 12 },
+    large = { marker = 21, ring = 28, font = 14 },
+}
 
 local backdrop = {
     bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -123,6 +128,25 @@ local function ShowMapPinRing(pin, alpha)
     pin.ring:Show()
 end
 
+function MainWindow:SetMapMarkerSize(markerSize, save)
+    local style = MAP_MARKER_STYLES[markerSize] or MAP_MARKER_STYLES.normal
+    markerSize = MAP_MARKER_STYLES[markerSize] and markerSize or "normal"
+    self.markerSize = markerSize
+
+    for _, pin in ipairs(self.mapPinRows or {}) do
+        pin.marker:SetSize(style.marker, style.marker)
+        pin.ring:SetSize(style.ring, style.ring)
+        pin.number:SetFont(STANDARD_TEXT_FONT, style.font, "OUTLINE")
+    end
+
+    if save then
+        local database = ns.modules.Database.data
+        if database then
+            database.settings.map.markerSize = markerSize
+        end
+    end
+end
+
 local function ClampWindowScale(scale)
     scale = tonumber(scale) or 1
     if scale < MIN_WINDOW_SCALE then
@@ -146,10 +170,13 @@ local function GetAvailableInstanceKeys(contentType)
     table.sort(keys, function(leftKey, rightKey)
         local left = ns.Data.instances[leftKey]
         local right = ns.Data.instances[rightKey]
-        if left.levelMin == right.levelMin then
-            return left.name < right.name
+        if left.levelMin ~= right.levelMin then
+            return left.levelMin < right.levelMin
         end
-        return left.levelMin < right.levelMin
+        if left.levelMax ~= right.levelMax then
+            return left.levelMax < right.levelMax
+        end
+        return left.name < right.name
     end)
     return keys
 end
@@ -188,8 +215,29 @@ function MainWindow:CreateTitle(parent)
     local close = CreateFrame("Button", nil, parent, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", -7, -7)
     close:SetScript("OnClick", function()
+        if ns.modules.SettingsPanel then
+            ns.modules.SettingsPanel:Hide()
+        end
         MainWindow.frame:Hide()
     end)
+
+    local settingsButton = CreateFrame("Button", nil, parent)
+    settingsButton:SetSize(18, 18)
+    settingsButton:SetPoint("RIGHT", close, "LEFT", -3, 0)
+    settingsButton:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+    settingsButton:SetHighlightTexture("Interface\\Buttons\\UI-OptionsButton", "ADD")
+    settingsButton:SetScript("OnEnter", function(entered)
+        GameTooltip:SetOwner(entered, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine(ns.L.OPTIONS, 1, 0.82, 0.38)
+        GameTooltip:Show()
+    end)
+    settingsButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    settingsButton:SetScript("OnClick", function()
+        ns.modules.SettingsPanel:Toggle()
+    end)
+    self.settingsButton = settingsButton
 end
 
 function MainWindow:CreateSidebar(parent)
@@ -588,6 +636,10 @@ function MainWindow:CreateMap(parent)
     note:SetPoint("TOPLEFT", map, "BOTTOMLEFT", 5, -9)
     note:SetText(ns.L.MAP_HINT)
     note:SetTextColor(0.48, 0.48, 0.48)
+
+    local database = ns.modules.Database.data
+    local mapSettings = database and database.settings.map or {}
+    self:SetMapMarkerSize(mapSettings.markerSize or "normal", false)
 end
 
 function MainWindow:CreateLootPanel(parent)
@@ -869,6 +921,7 @@ function MainWindow:Create()
     self.content = content
 
     self:CreateTitle(content)
+    ns.modules.SettingsPanel:Create(content, self.settingsButton)
     self:CreateSidebar(content)
     self:CreateMap(content)
     self:CreateLootPanel(content)
@@ -978,6 +1031,9 @@ function MainWindow:ShowFeedbackDialog()
     end
     if self.floorMenu then
         self.floorMenu:Hide()
+    end
+    if ns.modules.SettingsPanel then
+        ns.modules.SettingsPanel:Hide()
     end
     self.feedbackDialog:Show()
     self.feedbackDialog.editBox:SetText(ns.L.FEEDBACK_URL)
@@ -1129,8 +1185,13 @@ function MainWindow:RefreshSidebar()
     self.dungeonButton.label:SetText(instance.name)
     self.dungeonButton.label:SetFont(STANDARD_TEXT_FONT,
         #instance.name > 18 and 10 or 12, "")
-    self.dungeonButton.range:SetText(string.format(ns.L.LEVEL_RANGE,
-        instance.levelMin, instance.levelMax))
+    if instance.contentType == "raid" then
+        self.dungeonButton.range:SetText(string.format(ns.L.RAID_LEVEL,
+            instance.levelMax))
+    else
+        self.dungeonButton.range:SetText(string.format(ns.L.LEVEL_RANGE,
+            instance.levelMin, instance.levelMax))
+    end
     local entryKeys = GetInstanceEntryKeys(instance)
     local maxOffset = math.max(0, #entryKeys - MAX_ENCOUNTER_BUTTONS)
     self.sidebarOffset = math.max(0, math.min(self.sidebarOffset or 0, maxOffset))
@@ -1706,7 +1767,11 @@ function MainWindow:RefreshLoot()
         self.lootPrevious:Hide()
         self.lootNext:Hide()
     end
-    self.dropChanceHeading:SetText(ns.L.DROP_CHANCE_HEADING)
+    local database = ns.modules.Database.data
+    local browserSettings = database and database.settings.browser or {}
+    local showDropEstimates = browserSettings.showDropEstimates ~= false
+    self.dropChanceHeading:SetText(showDropEstimates
+        and ns.L.DROP_CHANCE_HEADING or ns.L.TYPE_HEADING)
     if boss.kind == "trashDrops" then
         self.emptyLootText:SetText(ns.L.NO_NOTABLE_TRASH_DROPS)
     else
@@ -1730,8 +1795,9 @@ function MainWindow:RefreshLoot()
             row.questIDs = entry.questIDs
             row.factionAvailability = entry.factionAvailability
             row.turnInToken = entry.turnInToken
-            row.dropChance = entry.dropChances and entry.dropChances[flavor]
-            row.dropChanceStatus = entry.dropChanceStatus
+            row.dropChance = showDropEstimates and entry.dropChances
+                and entry.dropChances[flavor] or nil
+            row.dropChanceStatus = showDropEstimates and entry.dropChanceStatus or nil
             row.isTrashDrop = boss.kind == "trashDrops"
             row.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
             SetTruncatedText(row.name,
@@ -1858,9 +1924,16 @@ function MainWindow:Toggle()
             self.feedbackDialog.editBox:ClearFocus()
             self.feedbackDialog:Hide()
         end
+        if ns.modules.SettingsPanel then
+            ns.modules.SettingsPanel:Hide()
+        end
         self.frame:Hide()
     else
-        self:SelectCurrentInstance()
+        local database = ns.modules.Database.data
+        local browserSettings = database and database.settings.browser or {}
+        if browserSettings.autoSelectCurrentInstance ~= false then
+            self:SelectCurrentInstance()
+        end
         self.frame:Show()
         self:RefreshLoot()
     end

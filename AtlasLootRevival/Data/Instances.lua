@@ -42,7 +42,7 @@ ns.Data.instances = {
         instanceID = 230,
         mapID = 1584,
         clientFlavors = { era = true },
-        levelMin = 42,
+        levelMin = 52,
         levelMax = 60,
         map = {
             textureFolder = "BlackrockDepths",
@@ -128,7 +128,7 @@ ns.Data.instances = {
         instanceID = 429,
         mapID = 2557,
         clientFlavors = { era = true },
-        levelMin = 55,
+        levelMin = 58,
         levelMax = 60,
         map = {
             textureFolder = "Diremaul",
@@ -176,8 +176,8 @@ ns.Data.instances = {
         instanceID = 90,
         mapID = 721,
         clientFlavors = { era = true },
-        levelMin = 24,
-        levelMax = 40,
+        levelMin = 29,
+        levelMax = 38,
         map = {
             textureFolder = "Gnomeregan",
             columns = 4,
@@ -413,8 +413,8 @@ ns.Data.instances = {
         instanceID = 129,
         mapID = 722,
         clientFlavors = { era = true },
-        levelMin = 37,
-        levelMax = 47,
+        levelMin = 40,
+        levelMax = 50,
         map = {
             textureFolder = "RazorfenDowns",
             columns = 4,
@@ -502,7 +502,7 @@ ns.Data.instances = {
         instanceID = 189,
         mapID = 796,
         clientFlavors = { era = true },
-        levelMin = 20,
+        levelMin = 26,
         levelMax = 45,
         map = {
             textureFolder = "ScarletMonastery",
@@ -539,7 +539,7 @@ ns.Data.instances = {
         instanceID = 289,
         mapID = 2057,
         clientFlavors = { era = true },
-        levelMin = 55,
+        levelMin = 58,
         levelMax = 60,
         map = {
             textureFolder = "Scholomance",
@@ -620,7 +620,7 @@ ns.Data.instances = {
         instanceID = 329,
         mapID = 2017,
         clientFlavors = { era = true },
-        levelMin = 37,
+        levelMin = 58,
         levelMax = 60,
         map = {
             textureFolder = "Stratholme",
@@ -732,7 +732,7 @@ ns.Data.instances = {
         mapID = 717,
         clientFlavors = { era = true },
         levelMin = 22,
-        levelMax = 32,
+        levelMax = 30,
         map = {
             textureFolder = "TheStockade",
             columns = 4,
@@ -760,7 +760,7 @@ ns.Data.instances = {
         mapID = 1477,
         clientFlavors = { era = true },
         levelMin = 50,
-        levelMax = 55,
+        levelMax = 60,
         map = {
             textureFolder = "TheTempleofAtalhakkar",
             columns = 4,
@@ -792,8 +792,8 @@ ns.Data.instances = {
         instanceID = 70,
         mapID = 1337,
         clientFlavors = { era = true },
-        levelMin = 40,
-        levelMax = 45,
+        levelMin = 42,
+        levelMax = 52,
         map = {
             textureFolder = "Uldaman",
             columns = 4,
@@ -856,8 +856,8 @@ ns.Data.instances = {
         instanceID = 43,
         mapID = 718,
         clientFlavors = { era = true, tbc = true },
-        levelMin = 17,
-        levelMax = 24,
+        levelMin = 15,
+        levelMax = 25,
         map = {
             textureFolder = "WailingCaverns",
             columns = 4,
@@ -887,7 +887,7 @@ ns.Data.instances = {
         instanceID = 209,
         mapID = 1176,
         clientFlavors = { era = true },
-        levelMin = 39,
+        levelMin = 44,
         levelMax = 54,
         map = {
             textureFolder = "ZulFarrak",

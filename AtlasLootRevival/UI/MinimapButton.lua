@@ -48,6 +48,26 @@ function MinimapButton:SetAngle(angle, save)
     end
 end
 
+function MinimapButton:SetShown(shown, save)
+    shown = shown ~= false
+    self.shown = shown
+
+    if self.button then
+        if shown then
+            self.button:Show()
+        else
+            self.button:Hide()
+        end
+    end
+
+    if save then
+        local database = ns.modules.Database.data
+        if database then
+            database.settings.minimap.shown = shown
+        end
+    end
+end
+
 function MinimapButton:UpdateDragPosition()
     local cursorX, cursorY = GetCursorPosition()
     local centerX, centerY = Minimap:GetCenter()
@@ -123,6 +143,7 @@ function MinimapButton:Create()
     self.button = button
     self.icon = icon
     self:SetAngle(ns.modules.Database.data.settings.minimap.angle, false)
+    self:SetShown(ns.modules.Database.data.settings.minimap.shown, false)
 end
 
 function MinimapButton:Initialize()

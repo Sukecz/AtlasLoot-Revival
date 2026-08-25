@@ -9,9 +9,15 @@ local defaults = {
         browser = {
             selectedContentType = "dungeon",
             selectedInstances = {},
+            autoSelectCurrentInstance = true,
+            showDropEstimates = true,
         },
         minimap = {
             angle = 225,
+            shown = true,
+        },
+        map = {
+            markerSize = "normal",
         },
         window = {},
     },
@@ -39,6 +45,30 @@ local function Migrate(database)
             and database.settings.minimap or {}
         if type(database.settings.minimap.angle) ~= "number" then
             database.settings.minimap.angle = defaults.settings.minimap.angle
+        end
+    end
+
+    if version < 3 then
+        database.settings = type(database.settings) == "table" and database.settings or {}
+        database.settings.browser = type(database.settings.browser) == "table"
+            and database.settings.browser or {}
+        database.settings.minimap = type(database.settings.minimap) == "table"
+            and database.settings.minimap or {}
+        database.settings.map = type(database.settings.map) == "table"
+            and database.settings.map or {}
+        if type(database.settings.browser.autoSelectCurrentInstance) ~= "boolean" then
+            database.settings.browser.autoSelectCurrentInstance = true
+        end
+        if type(database.settings.browser.showDropEstimates) ~= "boolean" then
+            database.settings.browser.showDropEstimates = true
+        end
+        if type(database.settings.minimap.shown) ~= "boolean" then
+            database.settings.minimap.shown = true
+        end
+        if database.settings.map.markerSize ~= "small"
+            and database.settings.map.markerSize ~= "normal"
+            and database.settings.map.markerSize ~= "large" then
+            database.settings.map.markerSize = "normal"
         end
     end
 

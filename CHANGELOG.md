@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Corrected every Classic dungeon recommended-level range and ordered the
+  dungeon selector from lower to higher recommended level.
+- Replaced the redundant `Recommended 60–60` raid range with `Level 60 raid`.
+- Added compact in-window options for minimap visibility, automatic instance
+  selection, drop estimates, map marker size, window scale, and UI reset.
+
 ## 0.1.1
 
 - Enlarged the instance map while keeping its original 4:3 proportions.

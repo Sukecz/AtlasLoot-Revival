@@ -41,6 +41,7 @@ jobs:
           test ! -e AtlasLootRevival/AtlasLootRevival_TBC.toc
           test -f AtlasLootRevival/Bindings.xml
           test -f AtlasLootRevival/UI/MinimapButton.lua
+          test -f AtlasLootRevival/UI/SettingsPanel.lua
           test -f AtlasLootRevival/assets/dropdown-chevron.tga
           test -f AtlasLootRevival/assets/minimap-icon.tga
           toc_version=$(sed -n 's/^## Version: //p' AtlasLootRevival/AtlasLootRevival.toc)
