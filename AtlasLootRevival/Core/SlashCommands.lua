@@ -13,7 +13,7 @@ local function GetCatalogStatus()
     local encounterCount = 0
     local relationCount = 0
     for instanceKey, instance in pairs(ns.Data.instances) do
-        if instance.clientFlavors[flavor] then
+        if ns.Constants.SupportsInstanceFlavor(instance, flavor) then
             if instance.contentType == "raid" then
                 raidCount = raidCount + 1
             else

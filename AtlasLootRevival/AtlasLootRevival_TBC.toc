@@ -1,4 +1,4 @@
-## Interface: 11509
+## Interface: 20506
 ## Title: AtlasLoot Revival
 ## Notes: Maps, bosses and loot — revived for modern WoW Classic.
 ## Author: AtlasLoot Revival contributors
@@ -8,8 +8,8 @@
 ## Category-enUS: Loot
 ## X-Curse-Project-ID: 1666354
 ## X-License: MIT
-## X-Flavor: Vanilla
-## AllowLoadGameType: vanilla
+## X-Flavor: TBC
+## AllowLoadGameType: tbc
 
 Bootstrap.lua
 Core\Constants.lua
@@ -17,6 +17,8 @@ Locales\enUS.lua
 Core\Database.lua
 Data\Instances.lua
 Data\Loot.lua
+Data\TBC\Instances.lua
+Data\TBC\Loot.lua
 UI\MainWindow.lua
 UI\SettingsPanel.lua
 UI\MinimapButton.lua

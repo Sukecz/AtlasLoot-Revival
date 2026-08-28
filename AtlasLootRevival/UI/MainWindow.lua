@@ -21,7 +21,7 @@ local MAX_MAP_PINS = 32
 local MAP_CLUSTER_DISTANCE = 30
 local MAX_CLUSTER_BUTTONS = 16
 local MAX_INSTANCE_MENU_BUTTONS = 16
-local MAX_FLOOR_MENU_BUTTONS = 8
+local MAX_FLOOR_MENU_BUTTONS = 20
 local MAX_LOOT_ROWS = 16
 local LOOT_ROW_HEIGHT = 24
 local LOOT_ROW_STEP = 25
@@ -162,7 +162,7 @@ local function GetAvailableInstanceKeys(contentType)
     local flavor = ns.Constants.GetClientFlavor()
     local keys = {}
     for key, instance in pairs(ns.Data.instances) do
-        if instance.clientFlavors[flavor]
+        if ns.Constants.SupportsInstanceFlavor(instance, flavor)
             and instance.contentType == (contentType or "dungeon") then
             table.insert(keys, key)
         end
@@ -181,10 +181,34 @@ local function GetAvailableInstanceKeys(contentType)
     return keys
 end
 
-local function GetInstanceEntryKeys(instance)
+local function SupportsClientFlavor(record, flavor)
+    return record and (not record.clientFlavors or record.clientFlavors[flavor])
+end
+
+local function SupportsDifficulty(record, difficulty)
+    return record and (not record.difficulties or record.difficulties[difficulty or "normal"])
+end
+
+local function GetVisibleLootItems(boss, difficulty)
+    local flavor = ns.Constants.GetClientFlavor()
+    local items = {}
+    for _, item in ipairs(boss and boss.items or {}) do
+        if SupportsClientFlavor(item, flavor) and SupportsDifficulty(item, difficulty) then
+            table.insert(items, item)
+        end
+    end
+    return items
+end
+
+local function GetInstanceEntryKeys(instance, instanceLoot, difficulty)
+    local flavor = ns.Constants.GetClientFlavor()
+    instanceLoot = instanceLoot or (ns.Data.loot and ns.Data.loot[instance.key]) or {}
     local keys = {}
     for _, bossKey in ipairs(instance.bosses) do
-        table.insert(keys, bossKey)
+        if SupportsClientFlavor(instanceLoot[bossKey], flavor)
+            and SupportsDifficulty(instanceLoot[bossKey], difficulty) then
+            table.insert(keys, bossKey)
+        end
     end
     table.insert(keys, TRASH_DROPS_KEY)
     return keys
@@ -309,29 +333,37 @@ function MainWindow:CreateSidebar(parent)
     instanceMenu.title = instanceMenu:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     instanceMenu.title:SetPoint("TOPLEFT", 10, -9)
     instanceMenu.title:SetTextColor(1, 0.82, 0.38)
-    instanceMenu.up = CreateFrame("Button", nil, instanceMenu)
-    instanceMenu.up:SetPoint("TOPRIGHT", -31, -5)
-    instanceMenu.up:SetSize(22, 22)
-    instanceMenu.up:SetNormalTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga")
-    instanceMenu.up:GetNormalTexture():SetTexCoord(0, 1, 1, 0)
-    instanceMenu.up:SetHighlightTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga", "ADD")
-    instanceMenu.up:GetHighlightTexture():SetTexCoord(0, 1, 1, 0)
-    instanceMenu.up:SetScript("OnClick", function()
-        MainWindow:ScrollInstanceMenu(-MAX_INSTANCE_MENU_BUTTONS)
-    end)
-    instanceMenu.down = CreateFrame("Button", nil, instanceMenu)
-    instanceMenu.down:SetPoint("LEFT", instanceMenu.up, "RIGHT", 2, 0)
-    instanceMenu.down:SetSize(22, 22)
-    instanceMenu.down:SetNormalTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga")
-    instanceMenu.down:SetHighlightTexture("Interface\\AddOns\\AtlasLootRevival\\assets\\dropdown-chevron.tga", "ADD")
-    instanceMenu.down:SetScript("OnClick", function()
-        MainWindow:ScrollInstanceMenu(MAX_INSTANCE_MENU_BUTTONS)
+    instanceMenu.scrollbar = CreateFrame("Slider", nil, instanceMenu)
+    instanceMenu.scrollbar:SetOrientation("VERTICAL")
+    instanceMenu.scrollbar:SetPoint("TOPRIGHT", -6, -31)
+    instanceMenu.scrollbar:SetPoint("BOTTOMRIGHT", -6, 7)
+    instanceMenu.scrollbar:SetWidth(10)
+    instanceMenu.scrollbar:SetMinMaxValues(0, 0)
+    instanceMenu.scrollbar:SetValueStep(1)
+    if instanceMenu.scrollbar.SetObeyStepOnDrag then
+        instanceMenu.scrollbar:SetObeyStepOnDrag(true)
+    end
+    instanceMenu.scrollbar.track = instanceMenu.scrollbar:CreateTexture(nil, "BACKGROUND")
+    instanceMenu.scrollbar.track:SetPoint("TOP", 0, 0)
+    instanceMenu.scrollbar.track:SetPoint("BOTTOM", 0, 0)
+    instanceMenu.scrollbar.track:SetWidth(4)
+    instanceMenu.scrollbar.track:SetColorTexture(0.18, 0.18, 0.18, 0.9)
+    instanceMenu.scrollbar:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+    local instanceMenuThumb = instanceMenu.scrollbar:GetThumbTexture()
+    instanceMenuThumb:SetSize(8, 32)
+    instanceMenuThumb:SetColorTexture(0.82, 0.64, 0.28, 0.95)
+    instanceMenu.scrollbar:SetScript("OnValueChanged", function(_, value)
+        local offset = math.floor(value + 0.5)
+        if offset ~= MainWindow.instanceMenuOffset then
+            MainWindow.instanceMenuOffset = offset
+            MainWindow:RefreshInstanceMenu()
+        end
     end)
     instanceMenu.buttons = {}
     for index = 1, MAX_INSTANCE_MENU_BUTTONS do
         local button = CreateFrame("Button", nil, instanceMenu)
         button:SetPoint("TOPLEFT", 7, -30 - ((index - 1) * 23))
-        button:SetPoint("TOPRIGHT", -7, -30 - ((index - 1) * 23))
+        button:SetPoint("TOPRIGHT", -21, -30 - ((index - 1) * 23))
         button:SetHeight(22)
         button.background = button:CreateTexture(nil, "BACKGROUND")
         button.background:SetAllPoints()
@@ -662,6 +694,39 @@ function MainWindow:CreateLootPanel(parent)
     self.bossMeta = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     self.bossMeta:SetPoint("TOPLEFT", self.bossTitle, "BOTTOMLEFT", 0, -5)
     self.bossMeta:SetTextColor(0.52, 0.52, 0.52)
+
+    self.difficultyButtons = {}
+    for index, difficulty in ipairs({ "normal", "heroic" }) do
+        local button = CreateFrame("Button", nil, panel)
+        button:SetSize(difficulty == "normal" and 52 or 48, 18)
+        if index == 1 then
+            button:SetPoint("TOPRIGHT", -62, -39)
+        else
+            button:SetPoint("LEFT", self.difficultyButtons.normal, "RIGHT", 3, 0)
+        end
+        button.background = button:CreateTexture(nil, "BACKGROUND")
+        button.background:SetAllPoints()
+        button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.label:SetPoint("CENTER")
+        button.label:SetText(difficulty == "normal" and ns.L.NORMAL or ns.L.HEROIC)
+        button.difficulty = difficulty
+        button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+        button:SetScript("OnClick", function(clicked)
+            MainWindow:SelectDifficulty(clicked.difficulty)
+        end)
+        button:SetScript("OnEnter", function(entered)
+            GameTooltip:SetOwner(entered, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine(string.format(ns.L.DIFFICULTY_TOOLTIP,
+                entered.difficulty == "normal" and ns.L.NORMAL or ns.L.HEROIC),
+                1, 0.82, 0.38)
+            GameTooltip:Show()
+        end)
+        button:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+        button:Hide()
+        self.difficultyButtons[difficulty] = button
+    end
 
     local divider = panel:CreateTexture(nil, "ARTWORK")
     divider:SetPoint("TOPLEFT", 12, -63)
@@ -1002,6 +1067,7 @@ function MainWindow:Create()
     self.selectedContentType = browserSettings.selectedContentType == "raid"
         and "raid" or "dungeon"
     self.selectedInstances = browserSettings.selectedInstances or {}
+    self.selectedDifficulties = browserSettings.selectedDifficulties or {}
     self.instanceOrder = GetAvailableInstanceKeys(self.selectedContentType)
     if #self.instanceOrder == 0 then
         self.selectedContentType = "dungeon"
@@ -1011,7 +1077,7 @@ function MainWindow:Create()
     local rememberedInstance = self.selectedInstances[self.selectedContentType]
     local rememberedData = rememberedInstance and ns.Data.instances[rememberedInstance]
     local flavor = ns.Constants.GetClientFlavor()
-    if not rememberedData or not rememberedData.clientFlavors[flavor]
+    if not ns.Constants.SupportsInstanceFlavor(rememberedData, flavor)
         or (rememberedData.contentType or "dungeon") ~= self.selectedContentType then
         rememberedInstance = nil
     end
@@ -1069,11 +1135,15 @@ function MainWindow:RefreshInstanceMenu()
     end
     menu.title:SetText(title)
     if #order > MAX_INSTANCE_MENU_BUTTONS then
-        menu.up:Show()
-        menu.down:Show()
+        menu.scrollbar:SetMinMaxValues(0, maxOffset)
+        menu.scrollbar:SetValue(self.instanceMenuOffset)
+        menu.scrollbar:GetThumbTexture():SetHeight(math.max(28,
+            (visibleCount / #order) * (visibleCount * 23)))
+        menu.scrollbar:Show()
     else
-        menu.up:Hide()
-        menu.down:Hide()
+        menu.scrollbar:SetMinMaxValues(0, 0)
+        menu.scrollbar:SetValue(0)
+        menu.scrollbar:Hide()
     end
     for index, button in ipairs(menu.buttons) do
         local instanceKey = order[self.instanceMenuOffset + index]
@@ -1185,14 +1255,19 @@ function MainWindow:RefreshSidebar()
     self.dungeonButton.label:SetText(instance.name)
     self.dungeonButton.label:SetFont(STANDARD_TEXT_FONT,
         #instance.name > 18 and 10 or 12, "")
+    local rangeText
     if instance.contentType == "raid" then
-        self.dungeonButton.range:SetText(string.format(ns.L.RAID_LEVEL,
-            instance.levelMax))
+        rangeText = string.format(ns.L.RAID_LEVEL, instance.levelMax)
     else
-        self.dungeonButton.range:SetText(string.format(ns.L.LEVEL_RANGE,
-            instance.levelMin, instance.levelMax))
+        rangeText = string.format(ns.L.LEVEL_RANGE,
+            instance.levelMin, instance.levelMax)
     end
-    local entryKeys = GetInstanceEntryKeys(instance)
+    if instance.contentPhase then
+        rangeText = rangeText .. "  •  " .. string.format(ns.L.CONTENT_PHASE,
+            instance.contentPhase)
+    end
+    self.dungeonButton.range:SetText(rangeText)
+    local entryKeys = GetInstanceEntryKeys(instance, instanceLoot, self.selectedDifficulty)
     local maxOffset = math.max(0, #entryKeys - MAX_ENCOUNTER_BUTTONS)
     self.sidebarOffset = math.max(0, math.min(self.sidebarOffset or 0, maxOffset))
     local firstVisible = self.sidebarOffset + 1
@@ -1259,9 +1334,11 @@ end
 
 function MainWindow:BuildMapClusters(instance, instanceLoot, floorIndex)
     local points = {}
-    for encounterIndex, bossKey in ipairs(instance.bosses) do
+    for encounterIndex, bossKey in ipairs(GetInstanceEntryKeys(instance, instanceLoot,
+        self.selectedDifficulty)) do
         local boss = instanceLoot[bossKey]
-        if boss and boss.floor == floorIndex and boss.x and boss.y then
+        if bossKey ~= TRASH_DROPS_KEY and boss
+            and boss.floor == floorIndex and boss.x and boss.y then
             table.insert(points, {
                 x = boss.x,
                 y = boss.y,
@@ -1354,7 +1431,9 @@ function MainWindow:RefreshMap()
         if tileIndex <= tileCount then
             local folder = mapData.textureFolder
             local fileName
-            if mapData.tileFilePattern == "tileIndexOnly" then
+            local tileFilePattern = floorData.tileFilePattern
+                or mapData.tileFilePattern
+            if tileFilePattern == "tileIndexOnly" then
                 fileName = folder .. tileIndex
             else
                 fileName = folder .. (floorData.textureIndex or floorData.index) .. "_" .. tileIndex
@@ -1438,7 +1517,7 @@ end
 function MainWindow:SelectInstance(instanceKey)
     local instance = instanceKey and ns.Data.instances[instanceKey]
     local flavor = ns.Constants.GetClientFlavor()
-    if not instance or not instance.clientFlavors[flavor] then
+    if not ns.Constants.SupportsInstanceFlavor(instance, flavor) then
         return
     end
 
@@ -1453,11 +1532,20 @@ function MainWindow:SelectInstance(instanceKey)
     self.selectedContentType = instance.contentType or "dungeon"
     self.selectedInstances = self.selectedInstances or {}
     self.selectedInstances[self.selectedContentType] = instanceKey
+    self.selectedDifficulties = self.selectedDifficulties or {}
+    local rememberedDifficulty = self.selectedDifficulties[instanceKey]
+    if rememberedDifficulty ~= "heroic" or not instance.difficulties
+        or not instance.difficulties.heroic then
+        rememberedDifficulty = "normal"
+    end
+    self.selectedDifficulty = rememberedDifficulty
+    self.selectedDifficulties[instanceKey] = rememberedDifficulty
     local database = ns.modules.Database.data
     if database then
         database.settings.browser = database.settings.browser or {}
         database.settings.browser.selectedContentType = self.selectedContentType
         database.settings.browser.selectedInstances = self.selectedInstances
+        database.settings.browser.selectedDifficulties = self.selectedDifficulties
     end
     self.instanceOrder = GetAvailableInstanceKeys(self.selectedContentType)
     self:RefreshContentTypeButtons()
@@ -1465,7 +1553,53 @@ function MainWindow:SelectInstance(instanceKey)
     self.selectedFloor = instance.map.floors[1].index
     self:RefreshSidebar()
     self:RefreshMap()
-    self:SelectBoss(instance.bosses[1])
+    self:RefreshDifficultyButtons()
+    self:SelectBoss(GetInstanceEntryKeys(instance, nil, self.selectedDifficulty)[1])
+end
+
+function MainWindow:RefreshDifficultyButtons()
+    local instance = ns.Data.instances[self.selectedInstanceKey]
+    local supportsHeroic = instance and instance.difficulties
+        and instance.difficulties.heroic
+    for difficulty, button in pairs(self.difficultyButtons or {}) do
+        if supportsHeroic then
+            SetButtonHighlight(button, difficulty == self.selectedDifficulty)
+            button:Show()
+        else
+            button:Hide()
+        end
+    end
+end
+
+function MainWindow:SelectDifficulty(difficulty)
+    local instance = ns.Data.instances[self.selectedInstanceKey]
+    if not instance or (difficulty ~= "normal" and difficulty ~= "heroic")
+        or (instance.difficulties and not instance.difficulties[difficulty])
+        or (not instance.difficulties and difficulty ~= "normal") then
+        return
+    end
+    if self.selectedDifficulty == difficulty then
+        return
+    end
+    self.selectedDifficulty = difficulty
+    self.selectedDifficulties = self.selectedDifficulties or {}
+    self.selectedDifficulties[instance.key] = difficulty
+    local database = ns.modules.Database.data
+    if database then
+        database.settings.browser.selectedDifficulties = self.selectedDifficulties
+    end
+    self.sidebarOffset = 0
+    self.lootOffset = 0
+    self:RefreshDifficultyButtons()
+    self:RefreshSidebar()
+    self:RefreshMap()
+    local entryKeys = GetInstanceEntryKeys(instance, nil, difficulty)
+    local selectedBoss = self.selectedBossKey
+    local boss = selectedBoss and ns.Data.loot[instance.key][selectedBoss]
+    if not SupportsDifficulty(boss, difficulty) then
+        selectedBoss = entryKeys[1]
+    end
+    self:SelectBoss(selectedBoss, true)
 end
 
 function MainWindow:GetCurrentInstanceKey()
@@ -1488,7 +1622,8 @@ function MainWindow:GetCurrentInstanceKey()
 
     local flavor = ns.Constants.GetClientFlavor()
     local selected = self.selectedInstanceKey and ns.Data.instances[self.selectedInstanceKey]
-    if selected and selected.instanceID == instanceID and selected.clientFlavors[flavor] then
+    if selected and selected.instanceID == instanceID
+        and ns.Constants.SupportsInstanceFlavor(selected, flavor) then
         return self.selectedInstanceKey
     end
 
@@ -1496,7 +1631,7 @@ function MainWindow:GetCurrentInstanceKey()
         local remembered = self.selectedInstances and self.selectedInstances[contentType]
         local rememberedInstance = remembered and ns.Data.instances[remembered]
         if rememberedInstance and rememberedInstance.instanceID == instanceID
-            and rememberedInstance.clientFlavors[flavor] then
+            and ns.Constants.SupportsInstanceFlavor(rememberedInstance, flavor) then
             return remembered
         end
     end
@@ -1526,7 +1661,7 @@ function MainWindow:ScrollEncounterList(delta)
     if not instance then
         return
     end
-    local entryKeys = GetInstanceEntryKeys(instance)
+    local entryKeys = GetInstanceEntryKeys(instance, nil, self.selectedDifficulty)
     if #entryKeys <= MAX_ENCOUNTER_BUTTONS then
         return
     end
@@ -1569,7 +1704,9 @@ end
 function MainWindow:SelectBoss(bossKey, keepFloor)
     local instanceKey = self.selectedInstanceKey or "wailing_caverns"
     local boss = ns.Data.loot[instanceKey] and ns.Data.loot[instanceKey][bossKey]
-    if not boss then
+    local flavor = ns.Constants.GetClientFlavor()
+    if not SupportsClientFlavor(boss, flavor)
+        or not SupportsDifficulty(boss, self.selectedDifficulty) then
         return
     end
     if self.mapClusterMenu then
@@ -1586,7 +1723,8 @@ function MainWindow:SelectBoss(bossKey, keepFloor)
     end
     self.selectedBossKey = bossKey
     local instance = ns.Data.instances[instanceKey]
-    for encounterIndex, key in ipairs(GetInstanceEntryKeys(instance)) do
+    for encounterIndex, key in ipairs(GetInstanceEntryKeys(instance, nil,
+        self.selectedDifficulty)) do
         if key == bossKey then
             local offset = self.sidebarOffset or 0
             if encounterIndex <= offset then
@@ -1606,7 +1744,17 @@ function MainWindow:SelectBoss(bossKey, keepFloor)
         kind = ns.L.TRASH_DROPS
         meta = ns.L.TRASH_DROPS_META
     else
-        meta = string.format("%s  •  NPC %d", kind, boss.npcID)
+        if boss.objectID then
+            meta = string.format("%s  •  Object %d", kind, boss.objectID)
+        else
+            local npcID = boss.npcID
+            local difficultyNPCs = boss.npcIDsByDifficulty
+                and boss.npcIDsByDifficulty[self.selectedDifficulty]
+            if difficultyNPCs and difficultyNPCs[1] then
+                npcID = difficultyNPCs[1]
+            end
+            meta = string.format("%s  •  NPC %d", kind, npcID)
+        end
     end
     if boss.locationScope == "preInstance" then
         meta = meta .. "  •  " .. ns.L.PRE_INSTANCE
@@ -1694,14 +1842,6 @@ function MainWindow:SelectBoss(bossKey, keepFloor)
     elseif boss.availability == "sharedFourHorsemenChest" then
         meta = meta .. "  •  " .. ns.L.SHARED_CHEST
     end
-    if boss.positionPrecision == "eventAnchor" then
-        meta = meta .. "  •  " .. ns.L.MAP_EVENT_ANCHOR
-    elseif boss.positionPrecision == "routeAnchor" then
-        meta = meta .. "  •  " .. ns.L.MAP_ROUTE_ANCHOR
-    elseif boss.kind ~= "trashDrops" and boss.locationScope ~= "preInstance"
-        and (not boss.x or not boss.y) then
-        meta = meta .. "  •  " .. ns.L.MAP_POSITION_PENDING
-    end
     self.bossMeta:SetText(meta)
 
     for key, button in pairs(self.bossButtons) do
@@ -1735,10 +1875,11 @@ end
 function MainWindow:ScrollLootList(delta)
     local instanceLoot = ns.Data.loot[self.selectedInstanceKey]
     local boss = self.selectedBossKey and instanceLoot and instanceLoot[self.selectedBossKey]
-    if not boss or #boss.items <= MAX_LOOT_ROWS then
+    local items = GetVisibleLootItems(boss, self.selectedDifficulty)
+    if not boss or #items <= MAX_LOOT_ROWS then
         return
     end
-    local maxOffset = math.max(0, #boss.items - MAX_LOOT_ROWS)
+    local maxOffset = math.max(0, #items - MAX_LOOT_ROWS)
     local nextOffset = math.max(0, math.min((self.lootOffset or 0) + delta, maxOffset))
     if nextOffset ~= self.lootOffset then
         self.lootOffset = nextOffset
@@ -1753,13 +1894,15 @@ function MainWindow:RefreshLoot()
     if not boss then
         return
     end
-    local maxOffset = math.max(0, #boss.items - MAX_LOOT_ROWS)
+    local flavor = ns.Constants.GetClientFlavor()
+    local items = GetVisibleLootItems(boss, self.selectedDifficulty)
+    local maxOffset = math.max(0, #items - MAX_LOOT_ROWS)
     self.lootOffset = math.max(0, math.min(self.lootOffset or 0, maxOffset))
     local firstVisible = self.lootOffset + 1
-    local lastVisible = math.min(#boss.items, self.lootOffset + MAX_LOOT_ROWS)
-    if #boss.items > MAX_LOOT_ROWS then
+    local lastVisible = math.min(#items, self.lootOffset + MAX_LOOT_ROWS)
+    if #items > MAX_LOOT_ROWS then
         self.lootHeading:SetText(string.format("%s  %d–%d / %d",
-            ns.L.LOOT, firstVisible, lastVisible, #boss.items))
+            ns.L.LOOT, firstVisible, lastVisible, #items))
         self.lootPrevious:Show()
         self.lootNext:Show()
     else
@@ -1772,19 +1915,26 @@ function MainWindow:RefreshLoot()
     local showDropEstimates = browserSettings.showDropEstimates ~= false
     self.dropChanceHeading:SetText(showDropEstimates
         and ns.L.DROP_CHANCE_HEADING or ns.L.TYPE_HEADING)
-    if boss.kind == "trashDrops" then
+    local lootStatus = boss.lootStatusByDifficulty
+        and boss.lootStatusByDifficulty[self.selectedDifficulty]
+        or (boss.lootStatusByFlavor and boss.lootStatusByFlavor[flavor])
+        or boss.lootStatus
+    if lootStatus == "underReview" and boss.kind == "trashDrops" then
+        self.emptyLootText:SetText(ns.L.TRASH_LOOT_UNDER_REVIEW)
+    elseif lootStatus == "underReview" then
+        self.emptyLootText:SetText(ns.L.LOOT_UNDER_REVIEW)
+    elseif boss.kind == "trashDrops" then
         self.emptyLootText:SetText(ns.L.NO_NOTABLE_TRASH_DROPS)
     else
         self.emptyLootText:SetText(ns.L.NO_NOTABLE_LOOT)
     end
-    if #boss.items == 0 then
+    if #items == 0 then
         self.emptyLootText:Show()
     else
         self.emptyLootText:Hide()
     end
-    local flavor = ns.Constants.GetClientFlavor()
     for index, row in ipairs(self.lootRows) do
-        local entry = boss.items[self.lootOffset + index]
+        local entry = items[self.lootOffset + index]
         if entry then
             local itemID = entry.itemID
             local name, link, quality, icon = GetItemDisplay(itemID)
@@ -1793,7 +1943,9 @@ function MainWindow:RefreshLoot()
             row.category = entry.category
             row.questID = entry.questID
             row.questIDs = entry.questIDs
-            row.factionAvailability = entry.factionAvailability
+            row.factionAvailability = entry.factionAvailabilityByFlavor
+                and entry.factionAvailabilityByFlavor[flavor]
+                or entry.factionAvailability
             row.turnInToken = entry.turnInToken
             row.dropChance = showDropEstimates and entry.dropChances
                 and entry.dropChances[flavor] or nil
@@ -1864,7 +2016,7 @@ function MainWindow:OnItemDataLoaded(itemID)
     if not boss then
         return
     end
-    for _, entry in ipairs(boss.items) do
+    for _, entry in ipairs(GetVisibleLootItems(boss, self.selectedDifficulty)) do
         if entry.itemID == itemID then
             self:RefreshLoot()
             return

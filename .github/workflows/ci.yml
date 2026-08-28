@@ -24,17 +24,26 @@ jobs:
         run: |
           set -euo pipefail
           test -f AtlasLootRevival/AtlasLootRevival.toc
-          test ! -e AtlasLootRevival/AtlasLootRevival_TBC.toc
+          test -f AtlasLootRevival/AtlasLootRevival_TBC.toc
+          test -f AtlasLootRevival/Data/TBC/Instances.lua
+          test -f AtlasLootRevival/Data/TBC/Loot.lua
           test -f AtlasLootRevival/Bindings.xml
           test -f AtlasLootRevival/UI/MinimapButton.lua
           test -f AtlasLootRevival/UI/SettingsPanel.lua
           test -f AtlasLootRevival/assets/dropdown-chevron.tga
           test -f AtlasLootRevival/assets/minimap-icon.tga
           grep -qx '## X-Curse-Project-ID: 1666354' AtlasLootRevival/AtlasLootRevival.toc
-          toc_version=$(sed -n 's/^## Version: //p' AtlasLootRevival/AtlasLootRevival.toc)
+          grep -qx '## X-Curse-Project-ID: 1666354' AtlasLootRevival/AtlasLootRevival_TBC.toc
+          era_version=$(sed -n 's/^## Version: //p' AtlasLootRevival/AtlasLootRevival.toc)
+          tbc_version=$(sed -n 's/^## Version: //p' AtlasLootRevival/AtlasLootRevival_TBC.toc)
           runtime_version=$(sed -n 's/^[[:space:]]*VERSION = "\([^"]*\)",/\1/p' AtlasLootRevival/Core/Constants.lua)
-          test -n "$toc_version"
-          test "$toc_version" = "$runtime_version"
+          test -n "$era_version"
+          test "$era_version" = "$tbc_version"
+          test "$era_version" = "$runtime_version"
+          grep -qx '## Interface: 11509' AtlasLootRevival/AtlasLootRevival.toc
+          grep -qx '## Interface: 20506' AtlasLootRevival/AtlasLootRevival_TBC.toc
+          grep -Fxq 'Data\TBC\Instances.lua' AtlasLootRevival/AtlasLootRevival_TBC.toc
+          grep -Fxq 'Data\TBC\Loot.lua' AtlasLootRevival/AtlasLootRevival_TBC.toc
           find AtlasLootRevival -type f -name '*.lua' -print0 | xargs -0 luac5.1 -p
           allowed_url_pattern='^AtlasLootRevival/Locales/enUS\.lua:[0-9]+:    FEEDBACK_URL = "https://www\.curseforge\.com/wow/addons/atlas-loot-revival/comments",$'
           unexpected_urls=$(git grep -nE 'https?://' -- AtlasLootRevival | grep -vE "$allowed_url_pattern" || true)

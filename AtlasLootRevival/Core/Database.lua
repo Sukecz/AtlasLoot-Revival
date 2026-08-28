@@ -9,6 +9,7 @@ local defaults = {
         browser = {
             selectedContentType = "dungeon",
             selectedInstances = {},
+            selectedDifficulties = {},
             autoSelectCurrentInstance = true,
             showDropEstimates = true,
         },
@@ -69,6 +70,15 @@ local function Migrate(database)
             and database.settings.map.markerSize ~= "normal"
             and database.settings.map.markerSize ~= "large" then
             database.settings.map.markerSize = "normal"
+        end
+    end
+
+    if version < 4 then
+        database.settings = type(database.settings) == "table" and database.settings or {}
+        database.settings.browser = type(database.settings.browser) == "table"
+            and database.settings.browser or {}
+        if type(database.settings.browser.selectedDifficulties) ~= "table" then
+            database.settings.browser.selectedDifficulties = {}
         end
     end
 
