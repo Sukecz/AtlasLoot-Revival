@@ -4512,6 +4512,8 @@ ns.Data.loot = {
             { itemID = 18684, category = "loot", dropChances = { era = 1.49 } },
             { itemID = 18680, category = "loot", dropChances = { era = 1.42 } },
             { itemID = 18683, category = "loot", dropChances = { era = 1.6 } },
+            { itemID = 20520, category = "loot", clientFlavors = { era = true }, dropChances = { era = 11.82 } },
+            { itemID = 20520, category = "loot", clientFlavors = { tbc = true }, dropChances = { tbc = 12.97 } },
         },
         },
         doctor_theolen_krastinov = {
@@ -4566,6 +4568,8 @@ ns.Data.loot = {
             { itemID = 18682, category = "loot", dropChances = { era = 1.43 } },
             { itemID = 18684, category = "loot", dropChances = { era = 1.44 } },
             { itemID = 18680, category = "loot", dropChances = { era = 1.51 } },
+            { itemID = 20520, category = "loot", clientFlavors = { era = true }, dropChances = { era = 10.89 } },
+            { itemID = 20520, category = "loot", clientFlavors = { tbc = true }, dropChances = { tbc = 11.78 } },
         },
         },
         the_ravenian = {
@@ -4593,6 +4597,8 @@ ns.Data.loot = {
             { itemID = 14623, category = "loot", dropChances = { era = 4.34 } },
             { itemID = 18684, category = "loot", dropChances = { era = 1.57 } },
             { itemID = 18683, category = "loot", dropChances = { era = 1.45 } },
+            { itemID = 20520, category = "loot", clientFlavors = { era = true }, dropChances = { era = 12.36 } },
+            { itemID = 20520, category = "loot", clientFlavors = { tbc = true }, dropChances = { tbc = 13.37 } },
         },
         },
         lord_alexei_barov = {
@@ -4647,6 +4653,8 @@ ns.Data.loot = {
             { itemID = 14612, category = "loot", dropChances = { era = 4.79 } },
             { itemID = 14623, category = "loot", dropChances = { era = 4.42 } },
             { itemID = 18684, category = "loot", dropChances = { era = 1.52 } },
+            { itemID = 20520, category = "loot", clientFlavors = { era = true }, dropChances = { era = 12.85 } },
+            { itemID = 20520, category = "loot", clientFlavors = { tbc = true }, dropChances = { tbc = 14.44 } },
         },
         },
         darkmaster_gandling = {

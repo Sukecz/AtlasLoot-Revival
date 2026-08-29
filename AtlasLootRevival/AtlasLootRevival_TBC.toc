@@ -2,7 +2,7 @@
 ## Title: AtlasLoot Revival
 ## Notes: Maps, bosses and loot — revived for modern WoW Classic.
 ## Author: AtlasLoot Revival contributors
-## Version: 0.2.0
+## Version: 0.2.1
 ## SavedVariables: AtlasLootRevivalDB
 ## IconTexture: Interface\AddOns\AtlasLootRevival\assets\minimap-icon.tga
 ## Category-enUS: Loot

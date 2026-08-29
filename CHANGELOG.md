@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Added Dark Rune to the verified loot tables for Instructor Malicia,
+  Lorekeeper Polkelt, The Ravenian, and Lady Illucia Barov in both Classic Era
+  and Burning Crusade Classic, with client-specific drop-rate estimates.
+
 ## 0.2.0
 
 - Restored all 20 original Classic dungeons and all seven Classic raids to the
