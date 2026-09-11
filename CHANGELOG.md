@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Restored the complete notable loot tables for General Drakkisath and Baron
+  Rivendare, including all Dungeon Set 1 chest and leg pieces omitted by the
+  original ten-row data cap.
+
 ## 0.2.1
 
 - Added Dark Rune to the verified loot tables for Instructor Malicia,
