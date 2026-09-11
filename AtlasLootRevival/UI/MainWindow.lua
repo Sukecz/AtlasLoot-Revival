@@ -740,37 +740,42 @@ function MainWindow:CreateLootPanel(parent)
     self.lootHeading:SetTextColor(0.62, 0.62, 0.62)
 
     self.dropChanceHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    self.dropChanceHeading:SetPoint("TOPRIGHT", -14, -76)
+    self.dropChanceHeading:SetPoint("TOPRIGHT", -26, -76)
     self.dropChanceHeading:SetText(ns.L.DROP_CHANCE_HEADING)
     self.dropChanceHeading:SetTextColor(0.62, 0.62, 0.62)
 
-    self.lootPrevious = CreateFrame("Button", nil, panel)
-    self.lootPrevious:SetPoint("TOPLEFT", 94, -67)
-    self.lootPrevious:SetSize(18, 18)
-    self.lootPrevious.label = self.lootPrevious:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    self.lootPrevious.label:SetPoint("CENTER")
-    self.lootPrevious.label:SetText("‹")
-    self.lootPrevious:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    self.lootPrevious:SetScript("OnClick", function()
-        MainWindow:ScrollLootList(-MAX_LOOT_ROWS)
-    end)
-
-    self.lootNext = CreateFrame("Button", nil, panel)
-    self.lootNext:SetPoint("LEFT", self.lootPrevious, "RIGHT", 2, 0)
-    self.lootNext:SetSize(18, 18)
-    self.lootNext.label = self.lootNext:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    self.lootNext.label:SetPoint("CENTER")
-    self.lootNext.label:SetText("›")
-    self.lootNext:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    self.lootNext:SetScript("OnClick", function()
-        MainWindow:ScrollLootList(MAX_LOOT_ROWS)
+    self.lootScrollbar = CreateFrame("Slider", nil, panel)
+    self.lootScrollbar:SetOrientation("VERTICAL")
+    self.lootScrollbar:SetPoint("TOPRIGHT", -6, -94)
+    self.lootScrollbar:SetPoint("BOTTOMRIGHT", -6, 10)
+    self.lootScrollbar:SetWidth(10)
+    self.lootScrollbar:SetMinMaxValues(0, 0)
+    self.lootScrollbar:SetValueStep(1)
+    if self.lootScrollbar.SetObeyStepOnDrag then
+        self.lootScrollbar:SetObeyStepOnDrag(true)
+    end
+    self.lootScrollbar.track = self.lootScrollbar:CreateTexture(nil, "BACKGROUND")
+    self.lootScrollbar.track:SetPoint("TOP", 0, 0)
+    self.lootScrollbar.track:SetPoint("BOTTOM", 0, 0)
+    self.lootScrollbar.track:SetWidth(4)
+    self.lootScrollbar.track:SetColorTexture(0.18, 0.18, 0.18, 0.9)
+    self.lootScrollbar:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+    local lootScrollbarThumb = self.lootScrollbar:GetThumbTexture()
+    lootScrollbarThumb:SetSize(8, 32)
+    lootScrollbarThumb:SetColorTexture(0.82, 0.64, 0.28, 0.95)
+    self.lootScrollbar:SetScript("OnValueChanged", function(_, value)
+        local offset = math.floor(value + 0.5)
+        if offset ~= MainWindow.lootOffset then
+            MainWindow.lootOffset = offset
+            MainWindow:RefreshLoot()
+        end
     end)
 
     self.lootRows = {}
     for index = 1, MAX_LOOT_ROWS do
         local row = CreateFrame("Button", nil, panel)
         row:SetPoint("TOPLEFT", 9, -94 - ((index - 1) * LOOT_ROW_STEP))
-        row:SetPoint("TOPRIGHT", -9, -94 - ((index - 1) * LOOT_ROW_STEP))
+        row:SetPoint("TOPRIGHT", -21, -94 - ((index - 1) * LOOT_ROW_STEP))
         row:SetHeight(LOOT_ROW_HEIGHT)
         row.background = row:CreateTexture(nil, "BACKGROUND")
         row.background:SetAllPoints()
@@ -1903,12 +1908,16 @@ function MainWindow:RefreshLoot()
     if #items > MAX_LOOT_ROWS then
         self.lootHeading:SetText(string.format("%s  %d–%d / %d",
             ns.L.LOOT, firstVisible, lastVisible, #items))
-        self.lootPrevious:Show()
-        self.lootNext:Show()
+        self.lootScrollbar:SetMinMaxValues(0, maxOffset)
+        self.lootScrollbar:SetValue(self.lootOffset)
+        self.lootScrollbar:GetThumbTexture():SetHeight(math.max(28,
+            (MAX_LOOT_ROWS / #items) * (MAX_LOOT_ROWS * LOOT_ROW_STEP)))
+        self.lootScrollbar:Show()
     else
         self.lootHeading:SetText(ns.L.LOOT)
-        self.lootPrevious:Hide()
-        self.lootNext:Hide()
+        self.lootScrollbar:SetMinMaxValues(0, 0)
+        self.lootScrollbar:SetValue(0)
+        self.lootScrollbar:Hide()
     end
     local database = ns.modules.Database.data
     local browserSettings = database and database.settings.browser or {}

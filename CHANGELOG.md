@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Replaced the boss-loot paging arrows with a draggable vertical scrollbar
+  matching the dungeon selector, while retaining mouse-wheel scrolling.
+
 ## 0.2.2
 
 - Restored the complete notable loot tables for General Drakkisath and Baron
