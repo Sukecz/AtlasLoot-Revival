@@ -20,6 +20,13 @@ jobs:
       - name: Install Lua 5.1
         run: sudo apt-get update && sudo apt-get install --yes lua5.1
 
+      - name: Validate both products
+        run: |
+          python3 tools/build_products.py --check
+          find AtlasLootForever -type f -name '*.lua' -print0 | xargs -0 luac5.1 -p
+          lua5.1 tests/product_runtime.lua "$PWD"
+          lua5.1 tests/product_runtime.lua "$PWD" tbc
+
       - name: Validate public addon
         run: |
           set -euo pipefail

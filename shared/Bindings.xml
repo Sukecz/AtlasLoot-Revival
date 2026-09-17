@@ -1,0 +1,7 @@
+<Bindings>
+    <Binding name="__COMMAND_KEY___TOGGLE" header="__COMMAND_KEY__" category="ADDONS">
+        if SlashCmdList and SlashCmdList.__COMMAND_KEY__ then
+            SlashCmdList.__COMMAND_KEY__("")
+        end
+    </Binding>
+</Bindings>

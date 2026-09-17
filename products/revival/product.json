@@ -1,0 +1,10 @@
+{
+  "addonId": "AtlasLootRevival",
+  "displayName": "AtlasLoot Revival",
+  "version": "0.2.3",
+  "commandKey": "ATLASLOOTREVIVAL",
+  "longCommand": "/atlaslootrevival",
+  "shortCommand": "/alr",
+  "feedbackUrl": "https://www.curseforge.com/wow/addons/atlas-loot-revival/comments",
+  "statusText": "In active development - found an error? Click here to report it."
+}

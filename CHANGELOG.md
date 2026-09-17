@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Split shared UI sources and product identity into independently generated
+  AtlasLoot Revival and AtlasLoot Forever addons. Revival retains its existing
+  Era/TBC data, TOCs, settings namespace and installation directory.
+- Added safe empty map/loot states for announced dungeons and isolated product
+  packaging, commands, bindings, settings and icons.
+- Added the Forever development catalog: 20 provisional Vanilla dungeon
+  baselines and nine announced dungeons with level ranges, without new boss,
+  loot or map data. Forever client compatibility is not yet verified.
+
 ## 0.2.3
 
 - Replaced the boss-loot paging arrows with a draggable vertical scrollbar

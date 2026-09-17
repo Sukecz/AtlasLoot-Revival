@@ -1,0 +1,7 @@
+<Bindings>
+    <Binding name="ATLASLOOTFOREVER_TOGGLE" header="ATLASLOOTFOREVER" category="ADDONS">
+        if SlashCmdList and SlashCmdList.ATLASLOOTFOREVER then
+            SlashCmdList.ATLASLOOTFOREVER("")
+        end
+    </Binding>
+</Bindings>

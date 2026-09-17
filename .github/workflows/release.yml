@@ -33,6 +33,12 @@ jobs:
       - name: Install Lua 5.1
         run: sudo apt-get update && sudo apt-get install --yes lua5.1
 
+      - name: Validate generated products
+        run: |
+          python3 tools/build_products.py --check
+          lua5.1 tests/product_runtime.lua "$PWD"
+          lua5.1 tests/product_runtime.lua "$PWD" tbc
+
       - name: Validate release input
         run: |
           set -euo pipefail

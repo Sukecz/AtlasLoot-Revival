@@ -1,8 +1,8 @@
 local _, ns = ...
 
 ns.L = {
-    ADDON_NAME = "AtlasLoot Revival",
-    TOGGLE_WINDOW = "Toggle AtlasLoot Revival",
+    ADDON_NAME = "AtlasLoot Forever",
+    TOGGLE_WINDOW = "Toggle AtlasLoot Forever",
     OPTIONS = "Options",
     SHOW_MINIMAP_BUTTON = "Show minimap button",
     AUTO_SELECT_INSTANCE = "Auto-select current instance",
@@ -97,15 +97,15 @@ ns.L = {
     DROP_VARIES_TOOLTIP = "Drop chance varies by enemy",
     RESIZE_HINT = "Drag to resize",
     STATUS_READY = "%d dungeons, %d raids, %d encounters, %d loot relations.",
-    STATUS_LIVE_QA = "In active development - found an error? Click here to report it.",
-    FEEDBACK_TITLE = "AtlasLoot Revival is in active development",
+    STATUS_LIVE_QA = "In development. Vanilla data has not been verified in Forever.",
+    FEEDBACK_TITLE = "AtlasLoot Forever is in active development",
     FEEDBACK_BODY = "Found incorrect loot, a drop chance, or a map marker? Leave a comment on CurseForge.",
     FEEDBACK_CLICK = "Click to copy the CurseForge comments link.",
     FEEDBACK_COPY_TITLE = "Report an issue on CurseForge",
     FEEDBACK_COPY_BODY = "Press Ctrl+C to copy the selected link, then paste it into your browser.",
-    FEEDBACK_URL = "https://www.curseforge.com/wow/addons/atlas-loot-revival/comments",
-    USAGE = "Commands: /alr, /alr status, /alr reset",
+    FEEDBACK_URL = "",
+    USAGE = "Commands: /alf, /alf status, /alf reset",
 }
 
-BINDING_HEADER_ATLASLOOTREVIVAL = ns.L.ADDON_NAME
-BINDING_NAME_ATLASLOOTREVIVAL_TOGGLE = ns.L.TOGGLE_WINDOW
+BINDING_HEADER_ATLASLOOTFOREVER = ns.L.ADDON_NAME
+BINDING_NAME_ATLASLOOTFOREVER_TOGGLE = ns.L.TOGGLE_WINDOW

@@ -1,0 +1,10 @@
+{
+  "addonId": "AtlasLootForever",
+  "displayName": "AtlasLoot Forever",
+  "version": "0.1.0-dev",
+  "commandKey": "ATLASLOOTFOREVER",
+  "longCommand": "/atlaslootforever",
+  "shortCommand": "/alf",
+  "feedbackUrl": "",
+  "statusText": "In development. Vanilla data has not been verified in Forever."
+}

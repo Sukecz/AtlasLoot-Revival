@@ -2,28 +2,37 @@
 
 **Maps, bosses and loot — revived for modern WoW Classic.**
 
-AtlasLoot Revival combines dungeon and raid maps, boss locations, and loot
-tables in one clean in-game browser. See where every boss is located and what
-it can drop without leaving World of Warcraft.
+AtlasLoot Revival is a standalone dungeon and raid browser for modern WoW
+Classic. It brings instance maps, clickable boss locations, and boss loot
+together in one clean in-game window, so you can plan a run or check an item
+without leaving the game.
+
+It supports WoW Classic Era, Hardcore, Anniversary, and Burning Crusade
+Classic. Atlas and AtlasLootClassic are not required.
 
 ## Features
 
-- All original Classic dungeons and level-60 raids in both Era and TBC clients
-- All 16 Burning Crusade dungeons with separate Normal and Heroic loot views
-- All nine Burning Crusade raids across content phases 1–5
+- All 20 original Classic dungeons and all seven level-60 raids
+- All 16 Burning Crusade dungeons with separate Normal and Heroic loot
+- All nine Burning Crusade raids across phases 1–5
 - Multi-floor instance maps with clickable boss markers
 - Clear encounter pickers for bosses that share or overlap a map location
-- Boss loot with estimated drop rates
+- Boss loot with carefully sourced drop-rate estimates where reliable
 - Boss-dropped quest items shown alongside regular loot
-- Turn-in token labels for class, quest, and reputation rewards
+- Badge of Justice, raid-token, quest, class, and reputation reward labels
 - Curated Trash Drops for notable rare items, recipes, and raid materials
 - Automatic detection of the dungeon or raid you are currently inside
-- Separate Dungeons and Raids catalogs
+- Separate Classic 1–60 and Burning Crusade 60–70 catalogs on the TBC client
 - Native item tooltips and paged loot lists
 - Minimap button and an assignable key binding
 - Compact in-window options for display and opening behavior
 - Movable and proportionally resizable window
-- No Atlas or AtlasLootClassic installation required
+- Standalone operation with no required libraries or map addons
+
+## Supported clients
+
+- WoW Classic Era, Hardcore, and Anniversary — Interface `11509`
+- WoW Burning Crusade Classic — Interface `20506`
 
 ## Usage
 
@@ -51,33 +60,29 @@ the default window position and size. The gear button beside the window close
 button provides minimap visibility, opening behavior, drop estimate, marker
 size, window scale, and reset controls.
 
-## Content
+## Included content
 
-The browser includes all 20 original Classic dungeons and the seven original
-level-60 raids in both the Era and Burning Crusade clients.
+The Era catalog contains all 20 original Classic dungeons and the seven
+original level-60 raids. The TBC client retains that complete Classic catalog
+and adds all 16 Burning Crusade dungeons and all nine Burning Crusade raids,
+including content-phase labels, Normal and Heroic dungeon views, Badge of
+Justice drops, and raid turn-in tokens.
 
-Version 0.2.0 also includes all 16 Burning Crusade dungeons and all
-nine Burning Crusade raids, with maps, reviewed encounter positions,
-difficulty-scoped loot, 1,504 uniform-cohort numeric drop-rate variants,
-content-phase labels, and raid turn-in tokens.
-Positions explicitly known to be variable, unresolved, or template
-placeholders are left without a marker instead of using a guessed coordinate.
+Boss markers use reviewed positions. Encounters whose position is genuinely
+variable or cannot be placed reliably remain selectable from the encounter
+list without displaying a guessed marker.
 
 ## Drop rates
 
-Drop percentages are estimates and do not guarantee the result of an individual
-kill. Boss-dropped quest items are clearly labeled, while Trash Drops show
-**Varies** when the chance depends on the enemy. A neutral **—** means the
-boss-item relationship is confirmed but no reliable numeric estimate is
-available. TBC percentages come only from direct Wowhead
-`count/outof` samples of at least 100 kills. Every boss-and-difficulty table
-uses one exact entity, phase, mode, page snapshot, and denominator; a row is
-never filled from a second source or fallback cohort. The current audit resolves
-1,504 variants. Another 205 ordinary variants lack a defensible sample. All 77
-Badge of Justice and 12 conditional Winter Hat relationships also intentionally
-show **—**, because their recorded `count/outof` is not a comparable per-kill
-probability. No Atlas estimate, synthetic denominator, mixed cohort, or
-undersampled percentage is displayed.
+Drop percentages are estimates and cannot guarantee the result of an
+individual kill. TBC rates are shown only when a sufficiently large,
+difficulty-specific sample is available from one consistent source. Normal and
+Heroic data are never mixed to fill missing percentages.
+
+A neutral **—** means the boss-item relationship is confirmed but a reliable
+per-kill estimate is not available. Badge of Justice and conditional seasonal
+items also intentionally omit a percentage when the available sample would be
+misleading. Trash Drops show **Varies** when the chance depends on the enemy.
 
 ## Independent project
 
@@ -86,3 +91,43 @@ or endorsed by Blizzard Entertainment, Atlas, AtlasLoot, or the original
 AtlasLootClassic authors.
 
 AtlasLoot Revival is released under the MIT License.
+
+## Shared development and AtlasLoot Forever
+
+This repository now builds two independent addons from the same UI sources.
+Revival retains its existing Classic Era/TBC data, installation path, settings
+and release workflow. AtlasLoot Forever is a development preview with its own
+name, compass/infinity icon, saved settings and `/alf` command.
+
+Forever currently contains a provisional snapshot of the 20 Vanilla dungeons
+with their existing maps and Era loot, plus nine announced Forever dungeons.
+The new dungeons contain names and announced level ranges only. No new maps,
+bosses, loot or game IDs are inferred. Vanilla data is visibly marked as not
+verified in Forever; inherited drop percentages are not displayed. Raids and
+TBC content are not included in Forever's initial catalog.
+
+Common runtime templates live in `shared/`, branding and TOCs in `products/`,
+and client flavor code in `compat/`. Generated addon directories remain
+checked in for installation and packaging. Edit the sources, then run:
+
+```bash
+python3 tools/build_products.py
+python3 tools/build_products.py --check
+lua5.1 tests/product_runtime.lua "$PWD"
+```
+
+The maintainer's local research workspace additionally supports
+`python3 tools/build_products.py --with-data` and `bash tests/run.sh` for data
+regeneration and provenance validation. Research JSON and its tools remain
+outside the public repository.
+
+Create a local Revival ZIP with
+`python3 tools/build_products.py --product revival --package`. The builder
+does not deploy or publish. Forever's development TOC uses Interface `0`
+explicitly as an unknown value. A Forever ZIP requires `--product forever
+--package --interface <verified-client-interface>`; this records an actual
+client value but does not establish API or in-game compatibility. Existing
+Revival release tags and the shared deployer at
+`/home/msminipc/projects/wow-addon-deployer` do not publish or install Forever.
+The stable local entrypoint is `/home/msminipc/bin/deploy-wow-addons-pc`; do not
+add a private deploy-script copy to this repository.

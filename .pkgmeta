@@ -8,3 +8,26 @@ ignore:
   - .git
   - .github
   - .gitignore
+  - .release
+  - .pkgmeta
+  - AGENTS.md
+  - AtlasLootForever
+  - agents
+  - assets-src
+  - compat
+  - data-src
+  - docs
+  - marker-editor
+  - products
+  - references
+  - shared
+  - shared-assets
+  - tests
+  - tools
+  - build
+  - dist
+  - release
+  - README.md
+  - CHANGELOG.md
+  - LICENSE
+  - THIRD_PARTY_NOTICES.md

@@ -7,3 +7,14 @@
 *.luac
 .DS_Store
 /marker-editor/
+__pycache__/
+*.pyc
+
+# Only the reproducible product builder and product smoke test are public.
+# Keep the existing local research tools, data and audits excluded.
+!/tools/
+/tools/*
+!/tools/build_products.py
+!/tests/
+/tests/*
+!/tests/product_runtime.lua

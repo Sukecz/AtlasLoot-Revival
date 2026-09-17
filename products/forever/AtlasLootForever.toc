@@ -1,0 +1,22 @@
+## Interface: 0
+## Title: AtlasLoot Forever
+## Notes: Development preview. Client interface and inherited Vanilla data require Forever verification.
+## Author: AtlasLoot Forever contributors
+## Version: __VERSION__
+## SavedVariables: AtlasLootForeverDB
+## IconTexture: Interface\AddOns\AtlasLootForever\assets\minimap-icon.tga
+## Category-enUS: Loot
+## X-License: MIT
+
+Bootstrap.lua
+Core\Constants.lua
+Locales\enUS.lua
+Core\Database.lua
+Data\Instances.lua
+Data\Loot.lua
+Data\Catalog.lua
+UI\MainWindow.lua
+UI\SettingsPanel.lua
+UI\MinimapButton.lua
+Core\SlashCommands.lua
+Core\Events.lua
