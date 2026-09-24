@@ -58,7 +58,7 @@ Drag the window to move it and use the lower-right grip to resize it. Drag the
 minimap button around the minimap to reposition it. Use `/alr reset` to restore
 the default window position and size. The gear button beside the window close
 button provides minimap visibility, opening behavior, drop estimate, marker
-size, window scale, and reset controls.
+size, and reset controls. Window size is adjusted with the lower-right grip.
 
 ## Included content
 

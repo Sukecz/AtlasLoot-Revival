@@ -11,7 +11,6 @@ ns.L = {
     MARKER_SMALL = "Small",
     MARKER_NORMAL = "Normal",
     MARKER_LARGE = "Large",
-    WINDOW_SCALE = "Window scale",
     RESET_WINDOW = "Reset window position and size",
     BROWSE = "Browse",
     DUNGEONS = "Dungeons",

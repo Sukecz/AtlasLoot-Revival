@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.4
 
+- Let other standard UI windows come to the foreground instead of keeping the
+  AtlasLoot window permanently above them.
+- Removed the redundant window-scale slider from settings; the lower-right
+  resize grip remains the single window-sizing control.
 - Split shared UI sources and product identity into independently generated
   AtlasLoot Revival and AtlasLoot Forever addons. Revival retains its existing
   Era/TBC data, TOCs, settings namespace and installation directory.

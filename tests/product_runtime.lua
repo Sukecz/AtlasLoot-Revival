@@ -50,6 +50,8 @@ for _, name in ipairs({"SetBackdrop", "SetBackdropColor", "SetBackdropBorderColo
     "SetBlendMode", "SetCheckedTexture", "SetShadowColor", "SetShadowOffset"}) do
     methods[name] = function() end
 end
+function methods:SetFrameStrata(value) self.frameStrata = value end
+function methods:SetToplevel(value) self.toplevel = value end
 CreateFrame = function(_, name) return widget(name) end
 UIParent = widget("UIParent")
 Minimap = widget("Minimap")
@@ -81,6 +83,10 @@ AtlasLootRevivalDB = { schemaVersion = 4, favorites = { [123] = true }, settings
 } }
 local revival = loadProduct("AtlasLootRevival", tbc and "AtlasLootRevival_TBC.toc" or "AtlasLootRevival.toc")
 local forever = loadProduct("AtlasLootForever", "AtlasLootForever.toc")
+assert(revival.modules.MainWindow.frame.frameStrata == "MEDIUM")
+assert(revival.modules.MainWindow.frame.toplevel == true)
+assert(forever.modules.MainWindow.frame.frameStrata == "MEDIUM")
+assert(forever.modules.MainWindow.frame.toplevel == true)
 assert(AtlasLootRevivalDB ~= AtlasLootForeverDB, "products must not share saved settings")
 assert(AtlasLootRevivalDB.favorites[123] and not AtlasLootForeverDB.favorites[123])
 assert(AtlasLootRevivalDB.settings.window.scale == 0.9)

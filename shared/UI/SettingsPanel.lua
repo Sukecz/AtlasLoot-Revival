@@ -3,7 +3,7 @@ local _, ns = ...
 local SettingsPanel = ns:RegisterModule("SettingsPanel", {})
 
 local PANEL_WIDTH = 300
-local PANEL_HEIGHT = 300
+local PANEL_HEIGHT = 240
 local markerOrder = { "small", "normal", "large" }
 
 local backdrop = {
@@ -143,45 +143,6 @@ function SettingsPanel:Create(parent, anchor)
         self.markerButtons[markerSize] = button
     end
 
-    local scaleLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    scaleLabel:SetPoint("TOPLEFT", 15, -214)
-    scaleLabel:SetText(ns.L.WINDOW_SCALE)
-    scaleLabel:SetTextColor(0.62, 0.62, 0.62)
-
-    self.scaleValue = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    self.scaleValue:SetPoint("TOPRIGHT", -15, -214)
-    self.scaleValue:SetTextColor(1, 0.82, 0.38)
-
-    local slider = CreateFrame("Slider", nil, panel)
-    slider:SetPoint("TOPLEFT", 15, -232)
-    slider:SetSize(270, 18)
-    slider:SetOrientation("HORIZONTAL")
-    slider:SetMinMaxValues(0.75, 1.25)
-    slider:SetValueStep(0.05)
-    if slider.SetObeyStepOnDrag then
-        slider:SetObeyStepOnDrag(true)
-    end
-    local track = slider:CreateTexture(nil, "BACKGROUND")
-    track:SetPoint("LEFT", 3, 0)
-    track:SetPoint("RIGHT", -3, 0)
-    track:SetHeight(4)
-    track:SetColorTexture(0.24, 0.24, 0.24, 1)
-    slider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-    local thumb = slider:GetThumbTexture()
-    if thumb then
-        thumb:SetSize(16, 24)
-    end
-    slider:SetScript("OnValueChanged", function(_, value)
-        value = math.floor((value * 20) + 0.5) / 20
-        SettingsPanel.scaleValue:SetText(string.format("%d%%",
-            math.floor((value * 100) + 0.5)))
-        if not SettingsPanel.refreshing then
-            ns.modules.MainWindow:SetWindowScale(value)
-            ns.modules.MainWindow:SavePosition()
-        end
-    end)
-    self.scaleSlider = slider
-
     local reset = CreateBackdropFrame("Button", panel)
     reset:SetPoint("BOTTOMLEFT", 14, 14)
     reset:SetPoint("BOTTOMRIGHT", -14, 14)
@@ -213,7 +174,6 @@ function SettingsPanel:Refresh()
         return
     end
 
-    self.refreshing = true
     self.showMinimap:SetChecked(settings.minimap.shown ~= false)
     self.autoSelect:SetChecked(settings.browser.autoSelectCurrentInstance ~= false)
     self.showDropEstimates:SetChecked(settings.browser.showDropEstimates ~= false)
@@ -221,11 +181,6 @@ function SettingsPanel:Refresh()
     for key, button in pairs(self.markerButtons) do
         SetChoiceSelected(button, key == markerSize)
     end
-    local windowScale = ns.modules.MainWindow.windowScale or 1
-    self.scaleValue:SetText(string.format("%d%%",
-        math.floor((windowScale * 100) + 0.5)))
-    self.scaleSlider:SetValue(windowScale)
-    self.refreshing = false
 end
 
 function SettingsPanel:Toggle()

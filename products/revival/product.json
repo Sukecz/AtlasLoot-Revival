@@ -1,7 +1,7 @@
 {
   "addonId": "AtlasLootRevival",
   "displayName": "AtlasLoot Revival",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "commandKey": "ATLASLOOTREVIVAL",
   "longCommand": "/atlaslootrevival",
   "shortCommand": "/alr",
